@@ -1,0 +1,252 @@
+<%- include('partials/header') %>
+
+<main class="main-content">
+  <div class="container">
+
+    <% if (error) { %>
+      <div class="alert alert-error" role="alert">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        <span><%= error %></span>
+        <a href="/?status=<%= currentFilter %>" class="alert-close" aria-label="Закрыть">&times;</a>
+      </div>
+    <% } %>
+
+    <% if (success) { %>
+      <div class="alert alert-success" role="alert">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+          <polyline points="22 4 12 14.01 9 11.01"></polyline>
+        </svg>
+        <span><%= success %></span>
+        <a href="/?status=<%= currentFilter %>" class="alert-close" aria-label="Закрыть">&times;</a>
+      </div>
+    <% } %>
+
+    <section class="metrics-grid">
+      <div class="metric-card">
+        <span class="metric-label">Всего задач</span>
+        <span class="metric-value"><%= stats.total %></span>
+      </div>
+      <div class="metric-card metric-pending">
+        <span class="metric-label">Ожидают</span>
+        <span class="metric-value"><%= stats.pending %></span>
+      </div>
+      <div class="metric-card metric-progress">
+        <span class="metric-label">В работе</span>
+        <span class="metric-value"><%= stats.inProgress %></span>
+      </div>
+      <div class="metric-card metric-completed">
+        <span class="metric-label">Завершены</span>
+        <span class="metric-value"><%= stats.completed %></span>
+      </div>
+      <% if (stats.overdue > 0) { %>
+        <div class="metric-card metric-overdue">
+          <span class="metric-label">Просрочено</span>
+          <span class="metric-value"><%= stats.overdue %></span>
+        </div>
+      <% } %>
+    </section>
+
+    <section id="new-task-form" class="panel new-task-panel">
+      <div class="panel-header">
+        <h2 class="panel-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+          </svg>
+          Создание новой задачи
+        </h2>
+      </div>
+      <form action="/tasks" method="POST" enctype="multipart/form-data" class="task-form">
+        <input type="hidden" name="currentFilter" value="<%= currentFilter %>">
+
+        <div class="form-row">
+          <div class="form-group flex-2">
+            <label for="task-title" class="form-label">Название задачи <span class="required">*</span></label>
+            <input type="text" id="task-title" name="title" required placeholder="Например, Подготовить отчет по лабораторной работе..." class="form-input">
+          </div>
+
+          <div class="form-group">
+            <label for="task-status" class="form-label">Начальный статус</label>
+            <select id="task-status" name="status" class="form-select">
+              <option value="pending" selected>Ожидает выполнения</option>
+              <option value="in_progress">В работе</option>
+              <option value="completed">Завершена</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="task-due-date" class="form-label">Ожидаемый срок (дедлайн)</label>
+            <input type="date" id="task-due-date" name="dueDate" class="form-input">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="task-description" class="form-label">Описание задачи</label>
+          <textarea id="task-description" name="description" rows="2" placeholder="Краткие детали, инструкции или требования к задаче..." class="form-textarea"></textarea>
+        </div>
+
+        <div class="form-row form-row-bottom">
+          <div class="form-group flex-2">
+            <label for="task-attachment" class="form-label">Прикрепить файл (опционально, до 5 МБ)</label>
+            <input type="file" id="task-attachment" name="attachment" class="form-file-input">
+            <span class="form-help">Поддерживаются PDF, DOCX, TXT, изображения, архивы, CSV.</span>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary btn-submit">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              Создать задачу
+            </button>
+          </div>
+        </div>
+      </form>
+    </section>
+
+    <nav class="filter-nav" aria-label="Фильтрация задач">
+      <div class="filter-pills">
+        <a href="/?status=all" class="filter-pill <%= currentFilter === 'all' ? 'active' : '' %>">
+          Все задачи
+          <span class="count-badge"><%= stats.total %></span>
+        </a>
+        <a href="/?status=pending" class="filter-pill <%= currentFilter === 'pending' ? 'active' : '' %>">
+          Ожидают
+          <span class="count-badge"><%= stats.pending %></span>
+        </a>
+        <a href="/?status=in_progress" class="filter-pill <%= currentFilter === 'in_progress' ? 'active' : '' %>">
+          В работе
+          <span class="count-badge"><%= stats.inProgress %></span>
+        </a>
+        <a href="/?status=completed" class="filter-pill <%= currentFilter === 'completed' ? 'active' : '' %>">
+          Завершены
+          <span class="count-badge"><%= stats.completed %></span>
+        </a>
+      </div>
+    </nav>
+
+    <section class="tasks-section">
+      <% if (tasks.length === 0) { %>
+        <div class="empty-state">
+          <div class="empty-icon">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <line x1="10" y1="9" x2="8" y2="9"></line>
+            </svg>
+          </div>
+          <h3>Задач не найдено</h3>
+          <p>В выбранной категории «<%= currentFilter %>» нет активных задач. Создайте новую задачу или смените фильтр.</p>
+          <a href="/?status=all" class="btn btn-secondary">Сбросить фильтр</a>
+        </div>
+      <% } else { %>
+        <div class="tasks-grid">
+          <% tasks.forEach(task => { %>
+            <% const taskOverdue = helpers.isOverdue(task.dueDate, task.status); %>
+            <article class="task-card status-<%= task.status %> <%= taskOverdue ? 'is-overdue' : '' %>" id="task-<%= task.id %>">
+              
+              <div class="task-card-header">
+                <div class="task-badges">
+                  <span class="status-badge badge-<%= task.status %>">
+                    <% if (task.status === 'pending') { %>Ожидает<% } %>
+                    <% if (task.status === 'in_progress') { %>В работе<% } %>
+                    <% if (task.status === 'completed') { %>Завершена<% } %>
+                  </span>
+                  <% if (taskOverdue) { %>
+                    <span class="status-badge badge-overdue">Просрочено</span>
+                  <% } %>
+                </div>
+
+                <form action="/tasks/<%= task.id %>/delete" method="POST" onsubmit="return confirm('Вы действительно хотите удалить эту задачу?');" class="action-form">
+                  <input type="hidden" name="currentFilter" value="<%= currentFilter %>">
+                  <button type="submit" class="btn-icon btn-delete" title="Удалить задачу" aria-label="Удалить задачу">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="3 6 5 6 21 6"></polyline>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                  </button>
+                </form>
+              </div>
+
+              <div class="task-card-body">
+                <h3 class="task-title"><%= task.title %></h3>
+                <% if (task.description) { %>
+                  <p class="task-desc"><%= task.description %></p>
+                <% } %>
+
+                <div class="task-meta">
+                  <div class="meta-item">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                      <line x1="16" y1="2" x2="16" y2="6"></line>
+                      <line x1="8" y1="2" x2="8" y2="6"></line>
+                      <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                    <span>Срок: <strong><%= helpers.formatDate(task.dueDate) %></strong></span>
+                  </div>
+                </div>
+
+                <div class="task-attachments">
+                  <h4 class="attachments-title">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+                    </svg>
+                    Вложения (<%= task.attachments.length %>)
+                  </h4>
+
+                  <% if (task.attachments.length > 0) { %>
+                    <ul class="attachment-list">
+                      <% task.attachments.forEach(att => { %>
+                        <li class="attachment-item">
+                          <a href="/tasks/<%= task.id %>/attachments/<%= att.id %>/download" class="attachment-link" title="Скачать <%= att.originalName %>">
+                            <span class="att-name"><%= att.originalName %></span>
+                            <span class="att-size">(<%= helpers.formatFileSize(att.size) %>)</span>
+                          </a>
+                          <form action="/tasks/<%= task.id %>/attachments/<%= att.id %>/delete" method="POST" class="action-form inline-form">
+                            <input type="hidden" name="currentFilter" value="<%= currentFilter %>">
+                            <button type="submit" class="btn-att-delete" title="Удалить файл" aria-label="Удалить файл">&times;</button>
+                          </form>
+                        </li>
+                      <% }) %>
+                    </ul>
+                  <% } %>
+
+                  <form action="/tasks/<%= task.id %>/attachments" method="POST" enctype="multipart/form-data" class="quick-attach-form">
+                    <input type="hidden" name="currentFilter" value="<%= currentFilter %>">
+                    <label class="btn-file-label">
+                      <span>+ Прикрепить файл</span>
+                      <input type="file" name="attachment" onchange="this.form.submit();" class="visually-hidden">
+                    </label>
+                  </form>
+                </div>
+              </div>
+
+              <div class="task-card-footer">
+                <form action="/tasks/<%= task.id %>/status" method="POST" class="status-form">
+                  <input type="hidden" name="currentFilter" value="<%= currentFilter %>">
+                  <label for="status-<%= task.id %>" class="status-label">Сменить статус:</label>
+                  <select id="status-<%= task.id %>" name="status" onchange="this.form.submit();" class="status-select">
+                    <option value="pending" <%= task.status === 'pending' ? 'selected' : '' %>>Ожидает</option>
+                    <option value="in_progress" <%= task.status === 'in_progress' ? 'selected' : '' %>>В работе</option>
+                    <option value="completed" <%= task.status === 'completed' ? 'selected' : '' %>>Завершена</option>
+                  </select>
+                </form>
+              </div>
+
+            </article>
+          <% }) %>
+        </div>
+      <% } %>
+    </section>
+
+  </div>
+</main>
+
+<%- include('partials/footer') %>

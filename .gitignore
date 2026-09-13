@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Production output
+dist/
+
+# Environment variables
+.env
+!.env.example
+
+# Local data & uploads
+uploads/*
+!uploads/.gitkeep
+data/*
+!data/.gitkeep
+
+# IDE and Logs
+*.log
+.vscode/
+.idea/
+.DS_Store
+
+# Agent governance
+.agents/
+AGENTS.md
