@@ -19,7 +19,3 @@ data/*
 .vscode/
 .idea/
 .DS_Store
-
-# Agent governance
-.agents/
-AGENTS.md
