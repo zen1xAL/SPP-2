@@ -1,18 +1,18 @@
 # Dependencies
-node_modules/
+**/node_modules/
 
 # Production output
-dist/
+**/dist/
 
 # Environment variables
-.env
-!.env.example
+**/.env
+!**/.env.example
 
 # Local data & uploads
-uploads/*
-!uploads/.gitkeep
-data/*
-!data/.gitkeep
+**/uploads/*
+!**/uploads/.gitkeep
+**/data/*
+!**/data/.gitkeep
 
 # IDE and Logs
 *.log
