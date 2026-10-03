@@ -48,6 +48,7 @@ npm run build        # Компиляция TypeScript в dist/
 
 Одностраничное веб-приложение (Single Page Application, SPA) на клиенте (React 18 + Vite) и REST API на сервере (Node.js, Express, TypeScript) с подключением реляционной базы данных PostgreSQL и контейнеризацией в Docker.
 * Задание: [Task2.md](file:///d:/SPP/7sem/SPP/Task2.md) (или [lab2/Task2.md](file:///d:/SPP/7sem/SPP/lab2/Task2.md)).
+* Технический разбор и база знаний: [lab2/docs/DEEP-DIVE.md](file:///d:/SPP/7sem/SPP/lab2/docs/DEEP-DIVE.md).
 * Особенности:
   * Полный цикл CRUD-операций без перезагрузки страницы браузера.
   * Обмен данными в формате JSON и загрузка файлов через `multipart/form-data`.
