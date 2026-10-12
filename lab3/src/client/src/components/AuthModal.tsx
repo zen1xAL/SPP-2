@@ -90,34 +90,51 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-card auth-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2 className="modal-title">
-            {tab === 'login' && 'Вход в TaskFlow'}
-            {tab === 'register' && 'Регистрация пользователя'}
-            {tab === 'forgot' && 'Восстановление доступа'}
-          </h2>
-          <button type="button" onClick={onClose} className="btn-icon" aria-label="Закрыть">
-            &times;
+          <div className="modal-title-wrap">
+            <div className="modal-title-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              </svg>
+            </div>
+            <div>
+              <h2 className="modal-title">
+                {tab === 'login' && 'Авторизация в TaskFlow'}
+                {tab === 'register' && 'Регистрация аккаунта'}
+                {tab === 'forgot' && 'Восстановление доступа'}
+              </h2>
+              <p className="modal-subtitle">
+                {tab === 'login' && 'Временные ключи JWT и защита от подбора паролей'}
+                {tab === 'register' && 'Создание новой учетной записи с заданной ролью'}
+                {tab === 'forgot' && 'Одноразовая ссылка восстановления через электронную почту'}
+              </p>
+            </div>
+          </div>
+          <button type="button" onClick={onClose} className="btn-close" aria-label="Закрыть">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
           </button>
         </div>
 
-        <div className="auth-tabs">
+        <div className="auth-segmented-nav">
           <button
             type="button"
-            className={`auth-tab ${tab === 'login' ? 'active' : ''}`}
+            className={`auth-nav-btn ${tab === 'login' ? 'active' : ''}`}
             onClick={() => { setTab('login'); setErrorMessage(''); }}
           >
             Вход
           </button>
           <button
             type="button"
-            className={`auth-tab ${tab === 'register' ? 'active' : ''}`}
+            className={`auth-nav-btn ${tab === 'register' ? 'active' : ''}`}
             onClick={() => { setTab('register'); setErrorMessage(''); }}
           >
             Регистрация
           </button>
           <button
             type="button"
-            className={`auth-tab ${tab === 'forgot' ? 'active' : ''}`}
+            className={`auth-nav-btn ${tab === 'forgot' ? 'active' : ''}`}
             onClick={() => { setTab('forgot'); setErrorMessage(''); }}
           >
             Сброс пароля
@@ -125,29 +142,35 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         </div>
 
         {tab === 'login' && (
-          <div className="quick-login-panel">
-            <span className="quick-login-label">Быстрый вход для проверки ролей (Seed):</span>
-            <div className="quick-login-buttons">
+          <div className="quick-login-box">
+            <div className="quick-login-header">
+              <span className="quick-login-title">Тестовый вход (Seed-пользователи)</span>
+              <span className="quick-login-hint">1 клик для проверки ролей</span>
+            </div>
+            <div className="quick-login-row">
               <button
                 type="button"
-                className="btn-quick-login role-admin"
+                className="btn-seed-role"
                 onClick={() => handleQuickLogin('admin@taskflow.local', 'AdminPass123!')}
               >
-                Администратор
+                <span className="seed-role-tag tag-admin">ADMIN</span>
+                <span className="seed-role-desc">Администратор</span>
               </button>
               <button
                 type="button"
-                className="btn-quick-login role-manager"
+                className="btn-seed-role"
                 onClick={() => handleQuickLogin('manager@taskflow.local', 'ManagerPass123!')}
               >
-                Менеджер
+                <span className="seed-role-tag tag-manager">MANAGER</span>
+                <span className="seed-role-desc">Менеджер</span>
               </button>
               <button
                 type="button"
-                className="btn-quick-login role-viewer"
+                className="btn-seed-role"
                 onClick={() => handleQuickLogin('viewer@taskflow.local', 'ViewerPass123!')}
               >
-                Наблюдатель
+                <span className="seed-role-tag tag-viewer">VIEWER</span>
+                <span className="seed-role-desc">Наблюдатель</span>
               </button>
             </div>
           </div>
@@ -157,7 +180,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <div className="alert alert-error">
             <span>{errorMessage}</span>
             {retryCountdown !== null && (
-              <span className="retry-timer">Блокировка: {retryCountdown} сек.</span>
+              <span className="retry-timer">Блокировка: {retryCountdown} с</span>
             )}
           </div>
         )}
@@ -168,47 +191,47 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="auth-form">
-          <div className="form-group">
-            <label htmlFor="auth-email" className="form-label">
-              Электронная почта (Email) <span className="required">*</span>
+        <form onSubmit={handleSubmit} className="auth-form-fields">
+          <div className="form-field">
+            <label htmlFor="auth-email" className="field-label">
+              Электронная почта
             </label>
             <input
               type="email"
               id="auth-email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="example@taskflow.local"
-              className="form-input"
+              placeholder="user@taskflow.local"
+              className="field-input"
               required
             />
           </div>
 
           {tab !== 'forgot' && (
-            <div className="form-group">
-              <label htmlFor="auth-password" className="form-label">
-                Пароль <span className="required">*</span>
+            <div className="form-field">
+              <label htmlFor="auth-password" className="field-label">
+                Пароль
               </label>
               <input
                 type="password"
                 id="auth-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Минимум 6 символов..."
-                className="form-input"
+                placeholder="••••••••"
+                className="field-input"
                 required
               />
             </div>
           )}
 
           {tab === 'register' && (
-            <div className="form-group">
-              <label htmlFor="auth-role" className="form-label">Назначаемая роль</label>
+            <div className="form-field">
+              <label htmlFor="auth-role" className="field-label">Назначаемая роль</label>
               <select
                 id="auth-role"
                 value={role}
                 onChange={(e) => setRole(e.target.value as UserRole)}
-                className="form-select"
+                className="field-select"
               >
                 <option value="viewer">Наблюдатель (viewer) – только чтение</option>
                 <option value="manager">Менеджер (manager) – управление задачами</option>
@@ -217,21 +240,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </div>
           )}
 
-          <div className="form-actions auth-actions">
-            <button
-              type="submit"
-              disabled={isLoading || retryCountdown !== null}
-              className="btn btn-primary btn-submit-full"
-            >
-              {isLoading
-                ? 'Обработка...'
-                : tab === 'login'
-                ? 'Войти'
-                : tab === 'register'
-                ? 'Зарегистрироваться'
-                : 'Отправить ссылку сброса'}
-            </button>
-          </div>
+          <button
+            type="submit"
+            disabled={isLoading || retryCountdown !== null}
+            className="btn btn-primary btn-block btn-lg"
+          >
+            {isLoading
+              ? 'Проверка запроса...'
+              : tab === 'login'
+              ? 'Войти в систему'
+              : tab === 'register'
+              ? 'Зарегистрироваться'
+              : 'Отправить ссылку сброса'}
+          </button>
         </form>
       </div>
     </div>

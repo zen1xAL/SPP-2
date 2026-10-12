@@ -8,6 +8,37 @@ interface SessionsModalProps {
   onSessionRevoked: () => void;
 }
 
+function cleanIp(ip: string): string {
+  return ip.replace(/^.*::ffff:/, '').replace(/^::1$/, '127.0.0.1');
+}
+
+function parseUserAgent(ua: string): { browser: string; os: string } {
+  let os = 'Неизвестная ОС';
+  if (ua.includes('Windows NT 10.0')) os = 'Windows 10/11';
+  else if (ua.includes('Windows')) os = 'Windows';
+  else if (ua.includes('Macintosh') || ua.includes('Mac OS')) os = 'macOS';
+  else if (ua.includes('Android')) os = 'Android';
+  else if (ua.includes('iPhone') || ua.includes('iPad')) os = 'iOS';
+  else if (ua.includes('Linux')) os = 'Linux';
+
+  let browser = 'Браузер';
+  if (ua.includes('Edg/')) {
+    const match = ua.match(/Edg\/([\d.]+)/);
+    browser = `Edge ${match ? match[1].split('.')[0] : ''}`.trim();
+  } else if (ua.includes('Chrome/')) {
+    const match = ua.match(/Chrome\/([\d.]+)/);
+    browser = `Chrome ${match ? match[1].split('.')[0] : ''}`.trim();
+  } else if (ua.includes('Firefox/')) {
+    const match = ua.match(/Firefox\/([\d.]+)/);
+    browser = `Firefox ${match ? match[1].split('.')[0] : ''}`.trim();
+  } else if (ua.includes('Safari/') && !ua.includes('Chrome/')) {
+    const match = ua.match(/Version\/([\d.]+)/);
+    browser = `Safari ${match ? match[1].split('.')[0] : ''}`.trim();
+  }
+
+  return { browser, os };
+}
+
 export const SessionsModal: React.FC<SessionsModalProps> = ({
   isOpen,
   onClose,
@@ -67,16 +98,24 @@ export const SessionsModal: React.FC<SessionsModalProps> = ({
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-card sessions-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2 className="modal-title">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-              <line x1="8" y1="21" x2="16" y2="21"></line>
-              <line x1="12" y1="17" x2="12" y2="21"></line>
+          <div className="modal-title-wrap">
+            <div className="modal-title-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                <line x1="8" y1="21" x2="16" y2="21"></line>
+                <line x1="12" y1="17" x2="12" y2="21"></line>
+              </svg>
+            </div>
+            <div>
+              <h2 className="modal-title">Активные сессии</h2>
+              <p className="modal-subtitle">Контроль подключенных устройств и безопасности аккаунта</p>
+            </div>
+          </div>
+          <button type="button" onClick={onClose} className="btn-close" aria-label="Закрыть">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
             </svg>
-            Контроль активных подключений
-          </h2>
-          <button type="button" onClick={onClose} className="btn-icon" aria-label="Закрыть">
-            &times;
           </button>
         </div>
 
@@ -92,44 +131,83 @@ export const SessionsModal: React.FC<SessionsModalProps> = ({
             <span>Загрузка подключений...</span>
           </div>
         ) : sessions.length === 0 ? (
-          <p className="empty-text">Нет активных сессий</p>
+          <div className="empty-state">
+            <p>Нет активных сессий</p>
+          </div>
         ) : (
           <div className="sessions-list">
-            {sessions.map((sess) => (
-              <div key={sess.id} className={`session-item ${sess.isCurrent ? 'session-current' : ''}`}>
-                <div className="session-info">
-                  <div className="session-title-row">
-                    <span className="session-email">{sess.email}</span>
-                    {sess.isCurrent && <span className="badge badge-current">Текущее устройство</span>}
-                    {sess.isRevoked && <span className="badge badge-revoked">Отозвана</span>}
-                    {sess.isExpired && !sess.isRevoked && <span className="badge badge-expired">Истекла</span>}
+            {sessions.map((sess) => {
+              const { browser, os } = parseUserAgent(sess.userAgent);
+              const ip = cleanIp(sess.ipAddress);
+              return (
+                <div key={sess.id} className={`session-card ${sess.isCurrent ? 'session-card-current' : ''}`}>
+                  <div className="session-card-header">
+                    <div className="session-device">
+                      <div className="session-device-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                          <line x1="8" y1="21" x2="16" y2="21"></line>
+                          <line x1="12" y1="17" x2="12" y2="21"></line>
+                        </svg>
+                      </div>
+                      <div className="session-device-info">
+                        <div className="session-device-name">
+                          <span>{browser}</span>
+                          <span className="session-divider">/</span>
+                          <span className="session-os">{os}</span>
+                        </div>
+                        <div className="session-ip-row">
+                          <code className="session-ip">{ip}</code>
+                          <span className="session-email-tag">{sess.email}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="session-status-wrap">
+                      {sess.isCurrent && (
+                        <span className="status-pill status-pill-active">
+                          <span className="pulse-dot"></span>
+                          Текущая сессия
+                        </span>
+                      )}
+                      {sess.isRevoked && (
+                        <span className="status-pill status-pill-revoked">
+                          Отозвана
+                        </span>
+                      )}
+                      {sess.isExpired && !sess.isRevoked && (
+                        <span className="status-pill status-pill-expired">
+                          Истекла
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div className="session-meta">
-                    <span>IP: <strong>{sess.ipAddress}</strong></span>
-                    <span>Браузер: {sess.userAgent}</span>
-                  </div>
-                  <div className="session-dates">
-                    <span>Создана: {formatDate(sess.createdAt)}</span>
-                    <span>Истекает: {formatDate(sess.expiresAt)}</span>
+
+                  <div className="session-card-footer">
+                    <div className="session-time-info">
+                      <span className="session-time-item">Создана: {formatDate(sess.createdAt)}</span>
+                      <span className="session-divider">•</span>
+                      <span className="session-time-item">Истекает: {formatDate(sess.expiresAt)}</span>
+                    </div>
+
+                    {!sess.isRevoked && !sess.isCurrent && (
+                      <button
+                        type="button"
+                        onClick={() => handleRevoke(sess.id)}
+                        className="btn btn-danger-ghost btn-sm"
+                        title="Отозвать данную сессию"
+                      >
+                        Отозвать
+                      </button>
+                    )}
                   </div>
                 </div>
-
-                {!sess.isRevoked && !sess.isCurrent && (
-                  <button
-                    type="button"
-                    onClick={() => handleRevoke(sess.id)}
-                    className="btn btn-secondary btn-revoke"
-                    title="Принудительно завершить сессию"
-                  >
-                    Завершить
-                  </button>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
-        <div className="modal-footer">
+        <div className="modal-actions-footer">
           <button type="button" onClick={onClose} className="btn btn-secondary">
             Закрыть
           </button>
