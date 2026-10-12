@@ -10,8 +10,10 @@
 SPP/
 ├── lab1/          # Лабораторная работа №1 (SSR, Express, EJS, JSON-хранилище)
 ├── lab2/          # Лабораторная работа №2 (SPA, React, REST API, PostgreSQL, Docker)
+├── lab3/          # Лабораторная работа №3 (RBAC, JWT, Rate Limiting, Сессии, Логирование, CI)
 ├── Task.md        # Исходное задание к лабораторной работе №1
 ├── Task2.md       # Исходное задание к лабораторной работе №2
+├── Task3.md       # Исходное задание к лабораторной работе №3
 └── README.md
 ```
 
@@ -33,54 +35,57 @@ npm run dev
 
 Приложение доступно по адресу: `http://localhost:3000`.
 
-### Тестирование и сборка:
-
-```bash
-cd lab1
-npm test             # Запуск всех 14 модульных и интеграционных тестов
-npm run typecheck    # Проверка строгой статической типизации
-npm run build        # Компиляция TypeScript в dist/
-```
-
 ---
 
 ## 📌 [Лабораторная работа №2](file:///d:/SPP/7sem/SPP/lab2/)
 
 Одностраничное веб-приложение (Single Page Application, SPA) на клиенте (React 18 + Vite) и REST API на сервере (Node.js, Express, TypeScript) с подключением реляционной базы данных PostgreSQL и контейнеризацией в Docker.
 * Задание: [Task2.md](file:///d:/SPP/7sem/SPP/Task2.md) (или [lab2/Task2.md](file:///d:/SPP/7sem/SPP/lab2/Task2.md)).
-* Технический разбор и база знаний: [lab2/docs/DEEP-DIVE.md](file:///d:/SPP/7sem/SPP/lab2/docs/DEEP-DIVE.md).
-* Особенности:
-  * Полный цикл CRUD-операций без перезагрузки страницы браузера.
-  * Обмен данными в формате JSON и загрузка файлов через `multipart/form-data`.
-  * Реляционная база данных PostgreSQL 16 (таблицы `tasks` и `attachments`).
-  * Валидация всех входящих данных и информативные уведомления об ошибках на клиенте.
-  * Упаковка в Docker Compose (сервисы `app` и `db`).
+* Технический разбор и база знаний: [lab2/docs/deep-dive/00-INDEX.md](file:///d:/SPP/7sem/SPP/lab2/docs/deep-dive/00-INDEX.md).
 
-### Быстрый запуск в Docker Compose (Рекомендуемый способ):
+### Быстрый запуск в Docker Compose:
 
 ```bash
 cd lab2
 docker compose up --build
 ```
 
-После старта контейнеров приложение автоматически инициализирует базу данных, применит таблицы и будет доступно по адресу:
-`http://localhost:3000`.
+Приложение доступно по адресу: `http://localhost:3000`.
 
-### Локальный запуск без Docker (для разработки):
+---
 
-Убедитесь, что у вас запущена база данных PostgreSQL (строка подключения по умолчанию: `postgresql://postgres:postgres@localhost:5432/taskdb`):
+## 📌 [Лабораторная работа №3](file:///d:/SPP/7sem/SPP/lab3/)
+
+Расширение веб-приложения TaskFlow корпоративными стандартами безопасности, ролевой моделью доступа, контролем подключений и автоматизированным CI-пайплайном:
+* Задание: [Task3.md](file:///d:/SPP/7sem/SPP/Task3.md).
+* База знаний и разбор архитектуры: [lab3/docs/deep-dive/00-INDEX.md](file:///d:/SPP/7sem/SPP/lab3/docs/deep-dive/00-INDEX.md).
+* Ключевые возможности:
+  1. **Ролевая модель доступа (RBAC)** с 3 ролями (`admin`, `manager`, `viewer`) на основе временных ключей (JWT Bearer Token с TTL 15 минут).
+  2. **Семантика стандартов HTTP**: строгое соблюдение RFC 7231 / RFC 9110 (200, 201, 204, 400, 401, 403, 404, 409, 422, 429, 500) и единый JSON-формат ошибок.
+  3. **Защита от подбора паролей**: Brute-Force Rate Limiting (HTTP 429 Too Many Requests с заголовком `Retry-After: 900`).
+  4. **Контроль активных подключений**: просмотр списка активных сессий и возможность удаленного отзыва сессий (`204 No Content`).
+  5. **Восстановление доступа через Email**: генерация криптографических одноразовых токенов сброса пароля.
+  6. **Структурированное логирование**: легковесный JSON-логгер со сквозным Correlation ID (`X-Request-Id`).
+  7. **Автоматизированная проверка кода (CI)**: GitHub Actions workflow (`.github/workflows/ci.yml`).
+
+### Быстрый запуск в Docker Compose:
 
 ```bash
-cd lab2
-npm install
-npm run build        # Сборка React клиента и Express сервера
-npm start            # Запуск производственного сервера
+cd lab3
+docker compose up --build
 ```
 
-Или в режиме горячей перезагрузки (Hot Module Replacement):
+Приложение доступно по адресу: `http://localhost:3000`.
+
+### Учетные записи для быстрой проверки ролей (Seed Data):
+* **Администратор (admin)**: `admin@taskflow.local` / `AdminPass123!`
+* **Менеджер (manager)**: `manager@taskflow.local` / `ManagerPass123!`
+* **Наблюдатель (viewer)**: `viewer@taskflow.local` / `ViewerPass123!`
+
+### Тестирование и верификация:
 
 ```bash
-cd lab2
-npm run dev:server   # Запуск Express API на порту 3000 (tsx watch)
-npm run dev:client   # Запуск React Vite dev-сервера на порту 5173
+cd lab3
+npm test        # Прогон всех 14 автоматических тестов (RBAC, 429, логи, сброс)
+npm run verify  # Полный цикл: строгий typecheck + automated tests
 ```
