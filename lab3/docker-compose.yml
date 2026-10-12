@@ -1,0 +1,41 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: taskflow_lab3_postgres
+    restart: always
+    environment:
+      POSTGRES_DB: taskdb_lab3
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - lab3_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d taskdb_lab3"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    container_name: taskflow_lab3_app
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/taskdb_lab3
+      UPLOAD_DIR: /app/uploads
+      NODE_ENV: production
+      MAX_FILE_SIZE_MB: 5
+      JWT_SECRET: super_secret_temporary_key_taskflow_jwt_2026
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - lab3_uploads_data:/app/uploads
+
+volumes:
+  lab3_postgres_data:
+  lab3_uploads_data:
