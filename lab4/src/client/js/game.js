@@ -104,6 +104,14 @@ export class GameApp {
         this.setupCanvasDimensions();
       }
     });
+
+    window.addEventListener('orientationchange', () => {
+      setTimeout(() => {
+        if (this.map) {
+          this.setupCanvasDimensions();
+        }
+      }, 100);
+    });
   }
 
   setupCanvasDimensions() {
@@ -111,6 +119,23 @@ export class GameApp {
     const arenaW = this.map.width * this.map.tileSize;
     const arenaH = this.map.height * this.map.tileSize;
     this.renderer.resize(arenaW, arenaH);
+
+    const viewport = document.querySelector('.arena-viewport');
+    if (viewport) {
+      const isPortrait = window.innerHeight > window.innerWidth;
+      const isMobile = window.innerWidth <= 768;
+
+      const reservedH = isMobile && isPortrait ? 150 : 20;
+      const availableW = Math.max(260, viewport.clientWidth - 16);
+      const availableH = Math.max(180, viewport.clientHeight - reservedH);
+
+      const scale = Math.min(availableW / arenaW, availableH / arenaH);
+      const displayW = Math.floor(arenaW * scale);
+      const displayH = Math.floor(arenaH * scale);
+
+      this.canvas.style.width = `${displayW}px`;
+      this.canvas.style.height = `${displayH}px`;
+    }
   }
 
   handleNewSnapshot(snapshot) {

@@ -79,6 +79,44 @@
   box-shadow: 0 2px 8px rgba(239, 68, 68, 0.6);
 }
 
+@media (max-width: 768px) {
+  .touch-overlay {
+    bottom: 8px;
+    left: 8px;
+    right: 8px;
+  }
+
+  .touch-dpad {
+    width: 120px;
+    height: 120px;
+  }
+
+  .dpad-btn {
+    width: 38px;
+    height: 38px;
+    font-size: 1.1rem;
+    border-radius: 6px;
+  }
+
+  .dpad-up    { top: 0; left: 41px; }
+  .dpad-down  { bottom: 0; left: 41px; }
+  .dpad-left  { top: 41px; left: 0; }
+  .dpad-right { top: 41px; right: 0; }
+
+  .dpad-center {
+    top: 41px;
+    left: 41px;
+    width: 38px;
+    height: 38px;
+  }
+
+  .touch-fire-btn {
+    width: 72px;
+    height: 72px;
+    font-size: 0.85rem;
+  }
+}
+
 @media (min-width: 1024px) and (pointer: fine) {
   .touch-overlay {
     opacity: 0.65;
