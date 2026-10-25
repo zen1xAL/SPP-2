@@ -11,7 +11,15 @@ export class CanvasRenderer {
     this.canvas.height = height * this.dpr;
     this.canvas.style.width = `${width}px`;
     this.canvas.style.height = `${height}px`;
-    this.ctx.scale(this.dpr, this.dpr);
+    this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+  }
+
+  drawRoundRect(ctx, x, y, w, h, r) {
+    if (typeof ctx.roundRect === 'function') {
+      ctx.roundRect(x, y, w, h, r);
+    } else {
+      ctx.rect(x, y, w, h);
+    }
   }
 
   addExplosion(x, y, color = '#f59e0b', count = 12) {
@@ -146,7 +154,7 @@ export class CanvasRenderer {
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.roundRect(-half, -half, size, size, 4);
+      this.drawRoundRect(ctx, -half, -half, size, size, 4);
       ctx.fill();
       ctx.stroke();
 
@@ -239,7 +247,7 @@ export class CanvasRenderer {
       ctx.shadowBlur = 8;
 
       ctx.beginPath();
-      ctx.roundRect(b.x - half, b.y - half, size, size, 4);
+      this.drawRoundRect(ctx, b.x - half, b.y - half, size, size, 4);
       ctx.fill();
       ctx.stroke();
 

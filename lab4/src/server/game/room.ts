@@ -80,6 +80,10 @@ export class GameRoom {
     const existingPlayerId = this.sessionToPlayerId.get(sessionId);
     if (existingPlayerId && this.tanks.has(existingPlayerId)) {
       const existing = this.tanks.get(existingPlayerId)!;
+      const oldWs = this.sockets.get(existing.id);
+      if (oldWs && oldWs !== ws && oldWs.readyState === oldWs.OPEN) {
+        try { oldWs.close(); } catch {}
+      }
       this.sockets.set(existing.id, ws);
       const timer = this.disconnectTimers.get(existing.id);
       if (timer) {
@@ -127,7 +131,11 @@ export class GameRoom {
     return tank;
   }
 
-  public disconnectPlayer(id: string): void {
+  public disconnectPlayer(id: string, socket?: WebSocket): void {
+    const currentSocket = this.sockets.get(id);
+    if (socket && currentSocket && currentSocket !== socket) {
+      return;
+    }
     this.sockets.delete(id);
     const tank = this.tanks.get(id);
     if (tank) {
@@ -151,6 +159,11 @@ export class GameRoom {
     if (timer) {
       clearTimeout(timer);
       this.disconnectTimers.delete(playerId);
+    }
+
+    const oldWs = this.sockets.get(playerId);
+    if (oldWs && oldWs !== ws && oldWs.readyState === oldWs.OPEN) {
+      try { oldWs.close(); } catch {}
     }
 
     this.sockets.set(playerId, ws);
@@ -473,9 +486,17 @@ export class GameRoom {
 
   private broadcast(msg: ServerMessage): void {
     const payload = JSON.stringify(msg);
-    for (const ws of this.sockets.values()) {
+    for (const [playerId, ws] of this.sockets.entries()) {
       if (ws.readyState === ws.OPEN) {
-        ws.send(payload);
+        try {
+          ws.send(payload, (err) => {
+            if (err) {
+              this.disconnectPlayer(playerId, ws);
+            }
+          });
+        } catch {
+          this.disconnectPlayer(playerId, ws);
+        }
       }
     }
   }

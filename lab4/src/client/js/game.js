@@ -55,6 +55,12 @@ export class GameApp {
         this.currentSnapshot = msg.snapshot;
         this.setupCanvasDimensions();
         this.ui.hideJoinModal();
+        if (!this.isRunning) {
+          this.startLoop();
+        }
+      },
+      onSessionExpired: () => {
+        this.ui.showJoinModal();
       },
       onState: (snapshot) => {
         this.handleNewSnapshot(snapshot);
@@ -83,8 +89,14 @@ export class GameApp {
         const colorInput = document.querySelector('input[name="tankColor"]:checked');
         const name = nameInput ? nameInput.value.trim() : 'Pilot';
         const color = colorInput ? colorInput.value : '#3b82f6';
-        this.network.connect(name, color);
+        this.network.join(name, color);
       });
+    }
+
+    if (this.network.hasSavedSession()) {
+      this.network.reconnect();
+    } else {
+      this.ui.showJoinModal();
     }
 
     window.addEventListener('resize', () => {
@@ -102,14 +114,16 @@ export class GameApp {
   }
 
   handleNewSnapshot(snapshot) {
-    if (this.currentSnapshot && this.map) {
+    if (this.currentSnapshot && this.map && this.map.grid) {
       if (snapshot.destroyedWalls.length > this.currentSnapshot.destroyedWalls.length) {
         const newWalls = snapshot.destroyedWalls.slice(this.currentSnapshot.destroyedWalls.length);
         for (const w of newWalls) {
-          this.map.grid[w.y][w.x] = 0;
-          const cx = w.x * this.map.tileSize + this.map.tileSize / 2;
-          const cy = w.y * this.map.tileSize + this.map.tileSize / 2;
-          this.renderer.addExplosion(cx, cy, '#ca8a04', 16);
+          if (this.map.grid[w.y] && this.map.grid[w.y][w.x] !== undefined) {
+            this.map.grid[w.y][w.x] = 0;
+            const cx = w.x * this.map.tileSize + this.map.tileSize / 2;
+            const cy = w.y * this.map.tileSize + this.map.tileSize / 2;
+            this.renderer.addExplosion(cx, cy, '#ca8a04', 16);
+          }
         }
       }
     }

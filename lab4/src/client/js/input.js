@@ -42,6 +42,11 @@ export class InputController {
       this.updateMovement();
     });
 
+    window.addEventListener('blur', () => {
+      this.keysDown.clear();
+      this.updateMovement();
+    });
+
     const canvas = document.getElementById('gameCanvas');
     if (canvas) {
       canvas.addEventListener('mousedown', (e) => {

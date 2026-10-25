@@ -34,7 +34,7 @@ export class WebSocketHandler {
       ws.on('close', () => {
         const playerId = this.socketToPlayerId.get(ws);
         if (playerId) {
-          this.defaultRoom.disconnectPlayer(playerId);
+          this.defaultRoom.disconnectPlayer(playerId, ws);
           this.socketToPlayerId.delete(ws);
         }
         this.socketToSessionId.delete(ws);

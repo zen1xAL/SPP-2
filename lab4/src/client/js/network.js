@@ -1,7 +1,7 @@
 export class NetworkClient {
   constructor() {
     this.ws = null;
-    this.sessionId = localStorage.getItem('cybertanks_session_id') || null;
+    this.sessionId = this.getStoredSessionId();
     this.playerId = null;
     this.lastTick = 0;
     this.isOnline = navigator.onLine;
@@ -12,8 +12,32 @@ export class NetworkClient {
     this.ping = 0;
     this.offlineActionQueue = [];
     this.callbacks = {};
+    this.savedName = null;
+    this.savedColor = null;
 
     this.initOnlineListeners();
+  }
+
+  getStoredSessionId() {
+    try {
+      return sessionStorage.getItem('cybertanks_session_id') || null;
+    } catch {
+      return null;
+    }
+  }
+
+  setStoredSessionId(id) {
+    try {
+      if (id) {
+        sessionStorage.setItem('cybertanks_session_id', id);
+      } else {
+        sessionStorage.removeItem('cybertanks_session_id');
+      }
+    } catch {}
+  }
+
+  hasSavedSession() {
+    return Boolean(this.getStoredSessionId());
   }
 
   setCallbacks(callbacks) {
@@ -26,7 +50,7 @@ export class NetworkClient {
       if (this.callbacks.onNetworkChange) {
         this.callbacks.onNetworkChange('online');
       }
-      this.connect();
+      this.reconnect();
     });
 
     window.addEventListener('offline', () => {
@@ -40,13 +64,65 @@ export class NetworkClient {
     });
   }
 
-  connect(playerName, playerColor) {
-    if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
+  join(playerName, playerColor) {
+    this.savedName = playerName;
+    this.savedColor = playerColor;
+    this.sessionId = null;
+    this.setStoredSessionId(null);
+
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.send({
+        type: 'JOIN',
+        name: this.savedName,
+        color: this.savedColor
+      });
       return;
     }
 
-    if (playerName) this.savedName = playerName;
-    if (playerColor) this.savedColor = playerColor;
+    if (this.ws) {
+      try {
+        this.ws.close();
+      } catch {}
+      this.ws = null;
+    }
+
+    this.connect();
+  }
+
+  reconnect() {
+    this.sessionId = this.getStoredSessionId();
+    if (!this.sessionId && (!this.savedName || !this.savedColor)) {
+      return;
+    }
+
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      if (this.sessionId) {
+        this.send({
+          type: 'RECONNECT',
+          sessionId: this.sessionId,
+          lastTick: this.lastTick
+        });
+      } else if (this.savedName && this.savedColor) {
+        this.send({
+          type: 'JOIN',
+          name: this.savedName,
+          color: this.savedColor
+        });
+      }
+      return;
+    }
+
+    if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
+      return;
+    }
+
+    this.connect();
+  }
+
+  connect() {
+    if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
+      return;
+    }
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.host;
@@ -69,6 +145,7 @@ export class NetworkClient {
         this.callbacks.onNetworkChange('online');
       }
 
+      this.sessionId = this.getStoredSessionId();
       if (this.sessionId) {
         this.send({
           type: 'RECONNECT',
@@ -115,7 +192,7 @@ export class NetworkClient {
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
       if (this.isOnline) {
-        this.connect();
+        this.reconnect();
       }
     }, delay);
   }
@@ -162,7 +239,7 @@ export class NetworkClient {
       case 'INIT': {
         this.playerId = msg.playerId;
         this.sessionId = msg.sessionId;
-        localStorage.setItem('cybertanks_session_id', msg.sessionId);
+        this.setStoredSessionId(msg.sessionId);
         if (this.callbacks.onInit) {
           this.callbacks.onInit(msg);
         }
@@ -209,14 +286,10 @@ export class NetworkClient {
 
       case 'ERROR': {
         if (msg.code === 'SESSION_EXPIRED') {
-          localStorage.removeItem('cybertanks_session_id');
+          this.setStoredSessionId(null);
           this.sessionId = null;
-          if (this.savedName && this.savedColor) {
-            this.send({
-              type: 'JOIN',
-              name: this.savedName,
-              color: this.savedColor
-            });
+          if (this.callbacks.onSessionExpired) {
+            this.callbacks.onSessionExpired();
           }
         }
         break;
