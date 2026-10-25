@@ -1,5 +1,6 @@
 import express, { type Request, type Response } from 'express';
 import cors from 'cors';
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getLeaderboard, getRecentMatches } from './db.js';
@@ -8,13 +9,30 @@ import type { GameRoom } from './game/room.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+function resolveClientDir(): string {
+  const candidates = [
+    path.resolve(__dirname, '../client'),
+    path.resolve(__dirname, '../../src/client'),
+    path.resolve(__dirname, '../../../src/client'),
+    path.resolve(process.cwd(), 'src/client'),
+    path.resolve(process.cwd(), 'client'),
+    path.resolve(__dirname, '../../client')
+  ];
+  for (const candidate of candidates) {
+    if (fs.existsSync(path.join(candidate, 'index.html'))) {
+      return candidate;
+    }
+  }
+  return candidates[0];
+}
+
 export function createApp(getRoom?: () => GameRoom): express.Express {
   const app = express();
 
   app.use(cors());
   app.use(express.json());
 
-  const clientDir = path.resolve(__dirname, '../../client');
+  const clientDir = resolveClientDir();
   app.use(express.static(clientDir));
 
   app.get('/api/health', (_req: Request, res: Response) => {
