@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: cybertanks-arena
+    runtime: node
+    plan: free
+    region: frankfurt
+    rootDir: lab4
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000

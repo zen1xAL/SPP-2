@@ -4,6 +4,7 @@ services:
     runtime: node
     plan: free
     region: frankfurt
+    rootDir: lab4
     buildCommand: npm ci && npm run build
     startCommand: npm start
     envVars:

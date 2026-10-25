@@ -25,6 +25,6 @@ export const CONFIG = {
   MAX_PLAYERS_PER_ROOM: 8,
   BOT_FILL_TARGET: 2,
   DATABASE_URL: process.env.DATABASE_URL || '',
-  DATA_DIR: path.resolve(__dirname, '../../../data'),
+  DATA_DIR: process.env.DATA_DIR || path.resolve(process.cwd(), 'data'),
   IS_PRODUCTION: process.env.NODE_ENV === 'production'
 };
