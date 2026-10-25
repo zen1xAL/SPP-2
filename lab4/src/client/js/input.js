@@ -104,7 +104,6 @@ export class InputController {
         btn.classList.add('active');
         this.activeTouchDir = dir;
         this.updateMovement();
-        if (navigator.vibrate) navigator.vibrate(10);
       };
 
       const handleRelease = (e) => {
@@ -116,12 +115,10 @@ export class InputController {
         }
       };
 
-      btn.addEventListener('touchstart', handlePress, { passive: false });
-      btn.addEventListener('touchend', handleRelease, { passive: false });
-      btn.addEventListener('touchcancel', handleRelease, { passive: false });
-      btn.addEventListener('mousedown', handlePress);
-      btn.addEventListener('mouseup', handleRelease);
-      btn.addEventListener('mouseleave', handleRelease);
+      btn.addEventListener('pointerdown', handlePress);
+      btn.addEventListener('pointerup', handleRelease);
+      btn.addEventListener('pointercancel', handleRelease);
+      btn.addEventListener('pointerleave', handleRelease);
     });
 
     const fireBtn = document.getElementById('touchFire');
@@ -130,12 +127,13 @@ export class InputController {
         e.preventDefault();
         fireBtn.classList.add('active');
         if (this.onFireCallback) this.onFireCallback();
-        if (navigator.vibrate) navigator.vibrate(25);
+        if (navigator.vibrate) {
+          try { navigator.vibrate(15); } catch {}
+        }
         setTimeout(() => fireBtn.classList.remove('active'), 120);
       };
 
-      fireBtn.addEventListener('touchstart', handleFire, { passive: false });
-      fireBtn.addEventListener('mousedown', handleFire);
+      fireBtn.addEventListener('pointerdown', handleFire);
     }
   }
 }

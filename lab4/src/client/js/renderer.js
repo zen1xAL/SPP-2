@@ -1,15 +1,18 @@
 export class CanvasRenderer {
   constructor(canvas) {
     this.canvas = canvas;
-    this.ctx = canvas.getContext('2d');
-    this.dpr = window.devicePixelRatio || 1;
+    this.ctx = canvas.getContext('2d', { alpha: false });
+    this.dpr = Math.min(window.devicePixelRatio || 1, 2);
     this.particles = [];
+    this.bgCanvas = null;
+    this.bgDirty = true;
   }
 
   resize(width, height) {
     this.canvas.width = width * this.dpr;
     this.canvas.height = height * this.dpr;
     this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    this.bgDirty = true;
   }
 
   drawRoundRect(ctx, x, y, w, h, r) {
@@ -20,49 +23,26 @@ export class CanvasRenderer {
     }
   }
 
-  addExplosion(x, y, color = '#f59e0b', count = 12) {
-    for (let i = 0; i < count; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = 40 + Math.random() * 90;
-      this.particles.push({
-        x,
-        y,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        radius: 2 + Math.random() * 3,
-        color,
-        alpha: 1,
-        decay: 1.8 + Math.random() * 1.5
-      });
+  setupBackground(map) {
+    if (!map) return;
+    const w = map.width * map.tileSize;
+    const h = map.height * map.tileSize;
+
+    if (!this.bgCanvas) {
+      this.bgCanvas = document.createElement('canvas');
     }
-  }
+    this.bgCanvas.width = w * this.dpr;
+    this.bgCanvas.height = h * this.dpr;
 
-  updateParticles(dt) {
-    for (let i = this.particles.length - 1; i >= 0; i--) {
-      const p = this.particles[i];
-      p.x += p.vx * dt;
-      p.y += p.vy * dt;
-      p.alpha -= p.decay * dt;
-      if (p.alpha <= 0) {
-        this.particles.splice(i, 1);
-      }
-    }
-  }
+    const bgCtx = this.bgCanvas.getContext('2d');
+    bgCtx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
 
-  render(map, snapshot, localPlayerId, dt = 0.016) {
-    this.updateParticles(dt);
-    const ctx = this.ctx;
-    const ts = map.tileSize;
+    bgCtx.fillStyle = '#060a12';
+    bgCtx.fillRect(0, 0, w, h);
 
-    ctx.fillStyle = '#060a12';
-    ctx.fillRect(0, 0, map.width * ts, map.height * ts);
-
-    this.renderFloorGrid(ctx, map.width, map.height, ts);
-    this.renderTiles(ctx, map.grid, ts);
-    this.renderBonuses(ctx, snapshot.bonuses);
-    this.renderTanks(ctx, snapshot.tanks, localPlayerId);
-    this.renderBullets(ctx, snapshot.bullets);
-    this.renderParticles(ctx);
+    this.renderFloorGrid(bgCtx, map.width, map.height, map.tileSize);
+    this.renderSolidWalls(bgCtx, map.grid, map.tileSize);
+    this.bgDirty = false;
   }
 
   renderFloorGrid(ctx, width, height, ts) {
@@ -84,16 +64,13 @@ export class CanvasRenderer {
     }
   }
 
-  renderTiles(ctx, grid, ts) {
+  renderSolidWalls(ctx, grid, ts) {
     for (let y = 0; y < grid.length; y++) {
       for (let x = 0; x < grid[y].length; x++) {
-        const cell = grid[y][x];
-        if (cell === 0) continue;
+        if (grid[y][x] === 1) {
+          const px = x * ts;
+          const py = y * ts;
 
-        const px = x * ts;
-        const py = y * ts;
-
-        if (cell === 1) {
           ctx.fillStyle = '#1e293b';
           ctx.fillRect(px, py, ts, ts);
 
@@ -102,7 +79,18 @@ export class CanvasRenderer {
 
           ctx.fillStyle = '#334155';
           ctx.fillRect(px + 4, py + 4, ts - 8, ts - 8);
-        } else if (cell === 2) {
+        }
+      }
+    }
+  }
+
+  renderBrickWalls(ctx, grid, ts) {
+    for (let y = 0; y < grid.length; y++) {
+      for (let x = 0; x < grid[y].length; x++) {
+        if (grid[y][x] === 2) {
+          const px = x * ts;
+          const py = y * ts;
+
           ctx.fillStyle = '#854d0e';
           ctx.fillRect(px, py, ts, ts);
 
@@ -121,6 +109,54 @@ export class CanvasRenderer {
     }
   }
 
+  addExplosion(x, y, color = '#f59e0b', count = 10) {
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 40 + Math.random() * 80;
+      this.particles.push({
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        radius: 2 + Math.random() * 2.5,
+        color,
+        alpha: 1,
+        decay: 2.2 + Math.random() * 1.5
+      });
+    }
+  }
+
+  updateParticles(dt) {
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      const p = this.particles[i];
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.alpha -= p.decay * dt;
+      if (p.alpha <= 0) {
+        this.particles.splice(i, 1);
+      }
+    }
+  }
+
+  render(map, snapshot, localPlayerId, dt = 0.016) {
+    this.updateParticles(dt);
+    const ctx = this.ctx;
+    const ts = map.tileSize;
+    const w = map.width * ts;
+    const h = map.height * ts;
+
+    if (this.bgDirty || !this.bgCanvas) {
+      this.setupBackground(map);
+    }
+
+    ctx.drawImage(this.bgCanvas, 0, 0, w, h);
+    this.renderBrickWalls(ctx, map.grid, ts);
+    this.renderBonuses(ctx, snapshot.bonuses);
+    this.renderTanks(ctx, snapshot.tanks, localPlayerId);
+    this.renderBullets(ctx, snapshot.bullets);
+    this.renderParticles(ctx);
+  }
+
   renderTanks(ctx, tanks, localPlayerId) {
     const now = Date.now();
 
@@ -134,14 +170,17 @@ export class CanvasRenderer {
       ctx.translate(tank.x, tank.y);
 
       if (tank.shieldUntil > now) {
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(0, 0, half + 8, 0, Math.PI * 2);
+        ctx.stroke();
+
         ctx.strokeStyle = '#38bdf8';
         ctx.lineWidth = 2;
-        ctx.shadowColor = '#38bdf8';
-        ctx.shadowBlur = 8;
         ctx.beginPath();
         ctx.arc(0, 0, half + 7, 0, Math.PI * 2);
         ctx.stroke();
-        ctx.shadowBlur = 0;
       }
 
       ctx.fillStyle = '#0f172a';
@@ -211,45 +250,49 @@ export class CanvasRenderer {
   }
 
   renderBullets(ctx, bullets) {
-    ctx.fillStyle = '#38bdf8';
-    ctx.shadowColor = '#38bdf8';
-    ctx.shadowBlur = 6;
-
     for (const b of bullets) {
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.4)';
       ctx.beginPath();
-      ctx.arc(b.x, b.y, 3, 0, Math.PI * 2);
+      ctx.arc(b.x, b.y, 4.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, 2.5, 0, Math.PI * 2);
       ctx.fill();
     }
-
-    ctx.shadowBlur = 0;
   }
 
   renderBonuses(ctx, bonuses) {
     const now = Date.now();
 
     for (const b of bonuses) {
-      const pulse = Math.sin(now * 0.006) * 2;
+      const pulse = Math.sin(now * 0.006) * 1.5;
       const size = 18 + pulse;
       const half = size / 2;
 
       let color = '#38bdf8';
+      let halo = 'rgba(56, 189, 248, 0.35)';
       let symbol = 'S';
-      if (b.type === 'RAPID_FIRE') { color = '#f59e0b'; symbol = 'R'; }
-      else if (b.type === 'SPEED_BOOST') { color = '#10b981'; symbol = '>'; }
-      else if (b.type === 'NUKE') { color = '#ef4444'; symbol = 'N'; }
+      if (b.type === 'RAPID_FIRE') { color = '#f59e0b'; halo = 'rgba(245, 158, 11, 0.35)'; symbol = 'R'; }
+      else if (b.type === 'SPEED_BOOST') { color = '#10b981'; halo = 'rgba(16, 185, 129, 0.35)'; symbol = '>'; }
+      else if (b.type === 'NUKE') { color = '#ef4444'; halo = 'rgba(239, 68, 68, 0.35)'; symbol = 'N'; }
+
+      ctx.strokeStyle = halo;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      this.drawRoundRect(ctx, b.x - half - 1, b.y - half - 1, size + 2, size + 2, 5);
+      ctx.stroke();
 
       ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
       ctx.strokeStyle = color;
       ctx.lineWidth = 2;
-      ctx.shadowColor = color;
-      ctx.shadowBlur = 8;
 
       ctx.beginPath();
       this.drawRoundRect(ctx, b.x - half, b.y - half, size, size, 4);
       ctx.fill();
       ctx.stroke();
 
-      ctx.shadowBlur = 0;
       ctx.fillStyle = color;
       ctx.font = '700 11px Inter, monospace';
       ctx.textAlign = 'center';

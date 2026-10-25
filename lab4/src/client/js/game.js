@@ -16,6 +16,7 @@ export class GameApp {
     this.localPlayerId = null;
     this.lastFrameTime = performance.now();
     this.isRunning = false;
+    this.renderTanks = new Map();
 
     this.init();
   }
@@ -70,7 +71,9 @@ export class GameApp {
       },
       onKill: (msg) => {
         if (msg.victimId === this.localPlayerId) {
-          if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+          if (navigator.vibrate) {
+            try { navigator.vibrate([100, 50, 100]); } catch {}
+          }
         }
       },
       onPing: (pingMs) => {
@@ -114,6 +117,16 @@ export class GameApp {
     });
   }
 
+  getDirectionVec(dir) {
+    switch (dir) {
+      case 'UP': return { x: 0, y: -1 };
+      case 'DOWN': return { x: 0, y: 1 };
+      case 'LEFT': return { x: -1, y: 0 };
+      case 'RIGHT': return { x: 1, y: 0 };
+      default: return { x: 0, y: 0 };
+    }
+  }
+
   setupCanvasDimensions() {
     if (!this.map) return;
     const arenaW = this.map.width * this.map.tileSize;
@@ -147,9 +160,44 @@ export class GameApp {
             this.map.grid[w.y][w.x] = 0;
             const cx = w.x * this.map.tileSize + this.map.tileSize / 2;
             const cy = w.y * this.map.tileSize + this.map.tileSize / 2;
-            this.renderer.addExplosion(cx, cy, '#ca8a04', 16);
+            this.renderer.addExplosion(cx, cy, '#ca8a04', 12);
           }
         }
+      }
+    }
+
+    const currentIds = new Set();
+    for (const tank of snapshot.tanks) {
+      currentIds.add(tank.id);
+      let rt = this.renderTanks.get(tank.id);
+      if (!rt) {
+        rt = {
+          ...tank,
+          renderX: tank.x,
+          renderY: tank.y,
+          targetX: tank.x,
+          targetY: tank.y
+        };
+        this.renderTanks.set(tank.id, rt);
+      } else {
+        rt.targetX = tank.x;
+        rt.targetY = tank.y;
+        rt.direction = tank.direction;
+        rt.health = tank.health;
+        rt.maxHealth = tank.maxHealth;
+        rt.shieldUntil = tank.shieldUntil;
+        rt.speedUntil = tank.speedUntil;
+        rt.rapidUntil = tank.rapidUntil;
+        rt.stats = tank.stats;
+        rt.isAlive = tank.isAlive;
+        rt.color = tank.color;
+        rt.name = tank.name;
+      }
+    }
+
+    for (const id of this.renderTanks.keys()) {
+      if (!currentIds.has(id)) {
+        this.renderTanks.delete(id);
       }
     }
 
@@ -171,8 +219,45 @@ export class GameApp {
       const dt = Math.min((time - this.lastFrameTime) / 1000, 0.1);
       this.lastFrameTime = time;
 
+      const tanksToRender = [];
+      const now = Date.now();
+      const lerpSpeed = Math.min(1.0, 24 * dt);
+
+      for (const [id, rt] of this.renderTanks.entries()) {
+        if (!rt.isAlive) continue;
+
+        if (id === this.localPlayerId && this.input.isMoving) {
+          const dirVec = this.getDirectionVec(this.input.currentDirection);
+          const speed = rt.speedUntil > now ? 130 * 1.45 : 130;
+          rt.renderX += dirVec.x * speed * dt;
+          rt.renderY += dirVec.y * speed * dt;
+          rt.renderX += (rt.targetX - rt.renderX) * Math.min(1.0, 10 * dt);
+          rt.renderY += (rt.targetY - rt.renderY) * Math.min(1.0, 10 * dt);
+        } else {
+          rt.renderX += (rt.targetX - rt.renderX) * lerpSpeed;
+          rt.renderY += (rt.targetY - rt.renderY) * lerpSpeed;
+        }
+
+        tanksToRender.push({
+          ...rt,
+          x: rt.renderX,
+          y: rt.renderY
+        });
+      }
+
+      if (this.currentSnapshot && this.currentSnapshot.bullets) {
+        for (const b of this.currentSnapshot.bullets) {
+          b.x += b.vx * dt;
+          b.y += b.vy * dt;
+        }
+      }
+
       if (this.map && this.currentSnapshot) {
-        this.renderer.render(this.map, this.currentSnapshot, this.localPlayerId, dt);
+        const renderSnapshot = {
+          ...this.currentSnapshot,
+          tanks: tanksToRender
+        };
+        this.renderer.render(this.map, renderSnapshot, this.localPlayerId, dt);
       }
 
       requestAnimationFrame(loop);
