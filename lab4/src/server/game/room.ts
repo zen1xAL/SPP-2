@@ -76,6 +76,38 @@ export class GameRoom {
     }
   }
 
+  private findSafeSpawn(excludeTankId?: string): Position {
+    const spawns = getSpawnPositions();
+    const aliveTanks = Array.from(this.tanks.values()).filter(
+      (t) => t.isAlive && t.id !== excludeTankId
+    );
+
+    const safeSpawns = spawns.filter((s) => {
+      const spawnBox = getTankBox(s.x, s.y);
+      return !aliveTanks.some((t) => checkAABB(spawnBox, getTankBox(t.x, t.y)));
+    });
+
+    if (safeSpawns.length > 0) {
+      return safeSpawns[Math.floor(Math.random() * safeSpawns.length)];
+    }
+
+    if (aliveTanks.length === 0) {
+      return spawns[0];
+    }
+
+    return spawns.reduce((best, s) => {
+      const distToClosest = aliveTanks.reduce(
+        (min, t) => Math.min(min, Math.hypot(t.x - s.x, t.y - s.y)),
+        Infinity
+      );
+      const bestDist = aliveTanks.reduce(
+        (min, t) => Math.min(min, Math.hypot(t.x - best.x, t.y - best.y)),
+        Infinity
+      );
+      return distToClosest > bestDist ? s : best;
+    }, spawns[0]);
+  }
+
   public addPlayer(id: string, name: string, color: string, sessionId: string, ws: WebSocket): Tank {
     const existingPlayerId = this.sessionToPlayerId.get(sessionId);
     if (existingPlayerId && this.tanks.has(existingPlayerId)) {
@@ -93,14 +125,13 @@ export class GameRoom {
       return existing;
     }
 
-    const spawns = getSpawnPositions();
-    const spawnIndex = this.tanks.size % spawns.length;
-    const spawn = spawns[spawnIndex];
+    const spawn = this.findSafeSpawn(id);
+    const spawnIndex = this.tanks.size % TANK_COLORS.length;
 
     const tank: Tank = {
       id,
       name: name.trim().slice(0, 16) || `Tank-${id.slice(0, 4)}`,
-      color: color || TANK_COLORS[spawnIndex % TANK_COLORS.length],
+      color: color || TANK_COLORS[spawnIndex],
       x: spawn.x,
       y: spawn.y,
       direction: 'UP',
@@ -462,8 +493,7 @@ export class GameRoom {
     const tank = this.tanks.get(id);
     if (!tank) return;
 
-    const spawns = getSpawnPositions();
-    const spawn = spawns[Math.floor(Math.random() * spawns.length)];
+    const spawn = this.findSafeSpawn(id);
 
     tank.x = spawn.x;
     tank.y = spawn.y;

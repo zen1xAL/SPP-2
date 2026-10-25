@@ -89,21 +89,41 @@ export function moveWithSlide(
   tankId: string,
   otherTanks: Tank[]
 ): Position {
+  const currentBox = getTankBox(currentX, currentY);
+  const alreadyInTankCollision = checkTankTankCollision(tankId, currentBox, otherTanks);
+
+  const canMoveTo = (box: BoundingBox, tx: number, ty: number): boolean => {
+    if (checkWallCollision(grid, box)) return false;
+    if (!alreadyInTankCollision) {
+      return !checkTankTankCollision(tankId, box, otherTanks);
+    }
+    for (const other of otherTanks) {
+      if (other.id === tankId || !other.isAlive) continue;
+      const otherBox = getTankBox(other.x, other.y);
+      if (checkAABB(currentBox, otherBox)) {
+        const curDist = Math.hypot(other.x - currentX, other.y - currentY);
+        const newDist = Math.hypot(other.x - tx, other.y - ty);
+        if (newDist <= curDist) return false;
+      }
+    }
+    return true;
+  };
+
   let targetX = currentX + deltaX;
   let targetY = currentY + deltaY;
 
   const fullBox = getTankBox(targetX, targetY);
-  if (!checkWallCollision(grid, fullBox) && !checkTankTankCollision(tankId, fullBox, otherTanks)) {
+  if (canMoveTo(fullBox, targetX, targetY)) {
     return { x: targetX, y: targetY };
   }
 
   const xOnlyBox = getTankBox(targetX, currentY);
-  if (!checkWallCollision(grid, xOnlyBox) && !checkTankTankCollision(tankId, xOnlyBox, otherTanks)) {
+  if (canMoveTo(xOnlyBox, targetX, currentY)) {
     return { x: targetX, y: currentY };
   }
 
   const yOnlyBox = getTankBox(currentX, targetY);
-  if (!checkWallCollision(grid, yOnlyBox) && !checkTankTankCollision(tankId, yOnlyBox, otherTanks)) {
+  if (canMoveTo(yOnlyBox, currentX, targetY)) {
     return { x: currentX, y: targetY };
   }
 

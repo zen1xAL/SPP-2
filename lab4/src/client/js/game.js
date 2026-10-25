@@ -211,6 +211,31 @@ export class GameApp {
     }
   }
 
+  canMoveClient(curX, curY, dirVec, step) {
+    if (!this.map || !this.map.grid) return true;
+    const nextX = curX + dirVec.x * step;
+    const nextY = curY + dirVec.y * step;
+    const half = 15;
+    const ts = this.map.tileSize;
+
+    const minTx = Math.floor((nextX - half) / ts);
+    const maxTx = Math.floor((nextX + half) / ts);
+    const minTy = Math.floor((nextY - half) / ts);
+    const maxTy = Math.floor((nextY + half) / ts);
+
+    for (let ty = minTy; ty <= maxTy; ty++) {
+      for (let tx = minTx; tx <= maxTx; tx++) {
+        if (ty < 0 || ty >= this.map.height || tx < 0 || tx >= this.map.width) {
+          return false;
+        }
+        if (this.map.grid[ty][tx] !== 0) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
   startLoop() {
     this.isRunning = true;
     this.lastFrameTime = performance.now();
@@ -229,10 +254,21 @@ export class GameApp {
         if (id === this.localPlayerId && this.input.isMoving) {
           const dirVec = this.getDirectionVec(this.input.currentDirection);
           const speed = rt.speedUntil > now ? 130 * 1.45 : 130;
-          rt.renderX += dirVec.x * speed * dt;
-          rt.renderY += dirVec.y * speed * dt;
-          rt.renderX += (rt.targetX - rt.renderX) * Math.min(1.0, 10 * dt);
-          rt.renderY += (rt.targetY - rt.renderY) * Math.min(1.0, 10 * dt);
+          const step = speed * dt;
+
+          if (this.canMoveClient(rt.renderX, rt.renderY, dirVec, step)) {
+            rt.renderX += dirVec.x * step;
+            rt.renderY += dirVec.y * step;
+          }
+
+          const distToServer = Math.hypot(rt.targetX - rt.renderX, rt.targetY - rt.renderY);
+          if (distToServer > 30) {
+            rt.renderX = rt.targetX;
+            rt.renderY = rt.targetY;
+          } else if (distToServer > 1) {
+            rt.renderX += (rt.targetX - rt.renderX) * Math.min(1.0, 12 * dt);
+            rt.renderY += (rt.targetY - rt.renderY) * Math.min(1.0, 12 * dt);
+          }
         } else {
           rt.renderX += (rt.targetX - rt.renderX) * lerpSpeed;
           rt.renderY += (rt.targetY - rt.renderY) * lerpSpeed;

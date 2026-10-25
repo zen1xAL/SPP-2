@@ -64,4 +64,39 @@ describe('CyberTanks Map and Physics System', () => {
     expect(nextPos.x).toBe(65);
     expect(nextPos.y).toBe(60);
   });
+
+  it('allows overlapping tanks to move apart and unstick', () => {
+    const map = createStandardMap();
+    const otherTank = {
+      id: 'other',
+      name: 'Other',
+      color: '#ef4444',
+      x: 100,
+      y: 100,
+      direction: 'UP' as const,
+      health: 3,
+      maxHealth: 3,
+      isAlive: true,
+      speed: 130,
+      bulletCooldownMs: 400,
+      lastShotAt: 0,
+      shieldUntil: 0,
+      speedUntil: 0,
+      rapidUntil: 0,
+      sessionId: 's-other',
+      stats: { kills: 0, deaths: 0, score: 0, wallsDestroyed: 0, bonusesCollected: 0 }
+    };
+
+    // Tank starts overlapping with otherTank at (105, 100)
+    const myStartX = 105;
+    const myStartY = 100;
+
+    // Moving right (away from otherTank at x=100) must succeed!
+    const moveAway = moveWithSlide(myStartX, myStartY, 5, 0, map.grid, 'my-tank', [otherTank]);
+    expect(moveAway.x).toBe(110);
+
+    // Moving left (further into otherTank) must be blocked!
+    const moveCloser = moveWithSlide(myStartX, myStartY, -5, 0, map.grid, 'my-tank', [otherTank]);
+    expect(moveCloser.x).toBe(105);
+  });
 });
