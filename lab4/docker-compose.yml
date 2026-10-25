@@ -1,0 +1,36 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: cybertanks_lab4_postgres
+    environment:
+      POSTGRES_DB: cybertanks
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword2026
+    ports:
+      - "5433:5432"
+    volumes:
+      - cybertanks_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d cybertanks"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cybertanks_lab4_app
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgres://postgres:postgrespassword2026@postgres:5432/cybertanks
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  cybertanks_pg_data:

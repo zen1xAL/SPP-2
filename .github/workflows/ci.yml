@@ -23,6 +23,7 @@ jobs:
             lab1/package-lock.json
             lab2/package-lock.json
             lab3/package-lock.json
+            lab4/package-lock.json
 
       - name: Verify Lab 1 Typecheck
         run: |
@@ -39,6 +40,12 @@ jobs:
       - name: Verify Lab 3 Typecheck
         run: |
           cd lab3
+          npm ci
+          npm run typecheck
+
+      - name: Verify Lab 4 Typecheck
+        run: |
+          cd lab4
           npm ci
           npm run typecheck
 
@@ -66,6 +73,12 @@ jobs:
           npm ci
           npm test
 
+      - name: Run Lab 4 Tests
+        run: |
+          cd lab4
+          npm ci
+          npm test
+
   docker-build:
     name: Docker Container Build Verification
     runs-on: ubuntu-latest
@@ -82,3 +95,10 @@ jobs:
           context: ./lab3
           push: false
           tags: taskflow-lab3:test
+
+      - name: Build Lab 4 Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./lab4
+          push: false
+          tags: cybertanks-lab4:test

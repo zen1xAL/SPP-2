@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>CyberTanks: Neon Siege &bull; Лабораторная работа №4</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/touch.css">
+</head>
+<body>
+  <div id="app">
+    <div id="joinModal" class="modal-overlay">
+      <div class="join-card">
+        <div class="card-header">
+          <div class="logo-badge">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="2" y="6" width="20" height="12" rx="2"></rect>
+              <circle cx="12" cy="12" r="3"></circle>
+              <line x1="12" y1="2" x2="12" y2="6"></line>
+              <line x1="6" y1="18" x2="6" y2="22"></line>
+              <line x1="18" y1="18" x2="18" y2="22"></line>
+            </svg>
+          </div>
+          <div>
+            <h1 class="game-title">CyberTanks</h1>
+            <p class="game-subtitle">Лабораторная работа №4 (WebSockets, Canvas, Без фреймворков)</p>
+          </div>
+        </div>
+
+        <form id="joinForm" class="join-form">
+          <div class="form-group">
+            <label for="playerName" class="form-label">Позывной пилота</label>
+            <input type="text" id="playerName" class="form-input" placeholder="Введите имя..." maxlength="16" required autofocus>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Цвет боевой машины</label>
+            <div class="color-picker-grid">
+              <label class="color-option">
+                <input type="radio" name="tankColor" value="#3b82f6" checked>
+                <span class="color-swatch" style="--c: #3b82f6"></span>
+              </label>
+              <label class="color-option">
+                <input type="radio" name="tankColor" value="#ef4444">
+                <span class="color-swatch" style="--c: #ef4444"></span>
+              </label>
+              <label class="color-option">
+                <input type="radio" name="tankColor" value="#10b981">
+                <span class="color-swatch" style="--c: #10b981"></span>
+              </label>
+              <label class="color-option">
+                <input type="radio" name="tankColor" value="#f59e0b">
+                <span class="color-swatch" style="--c: #f59e0b"></span>
+              </label>
+              <label class="color-option">
+                <input type="radio" name="tankColor" value="#8b5cf6">
+                <span class="color-swatch" style="--c: #8b5cf6"></span>
+              </label>
+              <label class="color-option">
+                <input type="radio" name="tankColor" value="#06b6d4">
+                <span class="color-swatch" style="--c: #06b6d4"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="controls-hint">
+            <div class="hint-column">
+              <span class="hint-title">Управление на ПК:</span>
+              <span class="hint-text">WASD / Стрелки – движение</span>
+              <span class="hint-text">Пробел / Клик мыши – огонь</span>
+            </div>
+            <div class="hint-column">
+              <span class="hint-title">Управление на смартфонах:</span>
+              <span class="hint-text">Экранный D-Pad слева</span>
+              <span class="hint-text">Сенсорная кнопка «ОГОНЬ» справа</span>
+            </div>
+          </div>
+
+          <button type="submit" id="btnEnterBattle" class="btn btn-primary btn-block btn-lg">
+            Войти на арену
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <header id="gameHeader" class="hud-topbar">
+      <div class="hud-left">
+        <div class="hud-player-badge">
+          <span id="hudPlayerColor" class="player-color-dot"></span>
+          <span id="hudPlayerName" class="player-name">Пилот</span>
+        </div>
+        <div class="hud-health-bar-wrap">
+          <div id="hudHealthBar" class="hud-health-bar" style="width: 100%"></div>
+          <span id="hudHealthText" class="hud-health-text">3 / 3 HP</span>
+        </div>
+        <div id="hudBuffBadge" class="hud-buff-badge hidden">
+          <span id="hudBuffIcon"></span>
+          <span id="hudBuffTimer">0s</span>
+        </div>
+      </div>
+
+      <div class="hud-center">
+        <div class="hud-metric">
+          <span class="metric-label">Счет</span>
+          <span id="hudScore" class="metric-val">0</span>
+        </div>
+        <div class="hud-metric">
+          <span class="metric-label">Фраги</span>
+          <span id="hudKills" class="metric-val">0</span>
+        </div>
+        <div class="hud-metric">
+          <span class="metric-label">Стены</span>
+          <span id="hudWalls" class="metric-val">0</span>
+        </div>
+      </div>
+
+      <div class="hud-right">
+        <div id="netStatusPill" class="net-status-pill net-online">
+          <span class="net-dot"></span>
+          <span id="netStatusText">В сети</span>
+          <span id="hudPing" class="net-ping">0 ms</span>
+        </div>
+        <button type="button" id="btnOpenLeaderboard" class="btn-hud" title="Таблица лидеров">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M6 9H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2h-2"></path>
+            <rect x="6" y="5" width="12" height="15" rx="1"></rect>
+          </svg>
+        </button>
+        <button type="button" id="btnToggleFullscreen" class="btn-hud" title="Во весь экран">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <polyline points="15 3 21 3 21 9"></polyline>
+            <polyline points="9 21 3 21 3 15"></polyline>
+            <line x1="21" y1="3" x2="14" y2="10"></line>
+            <line x1="3" y1="21" x2="10" y2="14"></line>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <main class="arena-viewport">
+      <div class="canvas-wrapper">
+        <canvas id="gameCanvas"></canvas>
+      </div>
+
+      <div id="touchControls" class="touch-overlay">
+        <div id="touchDpad" class="touch-dpad">
+          <button type="button" class="dpad-btn dpad-up" data-dir="UP">&uarr;</button>
+          <button type="button" class="dpad-btn dpad-left" data-dir="LEFT">&larr;</button>
+          <div class="dpad-center"></div>
+          <button type="button" class="dpad-btn dpad-right" data-dir="RIGHT">&rarr;</button>
+          <button type="button" class="dpad-btn dpad-down" data-dir="DOWN">&darr;</button>
+        </div>
+
+        <button type="button" id="touchFire" class="touch-fire-btn">
+          <span>ОГОНЬ</span>
+        </button>
+      </div>
+
+      <div id="conflictToast" class="conflict-toast hidden">
+        <div class="toast-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+          </svg>
+        </div>
+        <div class="toast-content">
+          <span class="toast-title">Конкурентный конфликт разрешен</span>
+          <p id="conflictDesc" class="toast-desc">Пакет арбитража LWW</p>
+        </div>
+      </div>
+
+      <div id="reconnectBanner" class="reconnect-banner hidden">
+        <div class="spinner"></div>
+        <div>
+          <span class="reconnect-title">Связь с ареной потеряна</span>
+          <p class="reconnect-desc">Состояние сохранено. Выполняется автоматическое переподключение...</p>
+        </div>
+      </div>
+    </main>
+
+    <div id="leaderboardModal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h2 class="modal-title">Таблица рекордов (БД)</h2>
+          <button type="button" id="btnCloseLeaderboard" class="btn-close">&times;</button>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Место</th>
+                <th>Пилот</th>
+                <th>Рекорд</th>
+                <th>Победы</th>
+                <th>Фраги</th>
+                <th>Стены</th>
+              </tr>
+            </thead>
+            <tbody id="leaderboardBody">
+              <tr><td colspan="6" class="text-center">Загрузка данных...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
