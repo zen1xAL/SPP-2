@@ -61,10 +61,9 @@ function readLocalStore(): LocalStoreData {
 
 function writeLocalStore(data: LocalStoreData): void {
   ensureDataDirectory();
-  const tempPath = `${localFilePath}.tmp`;
-  fs.writeFileSync(tempPath, JSON.stringify(data, null, 2), 'utf-8');
-  fs.renameSync(tempPath, localFilePath);
+  fs.writeFileSync(localFilePath, JSON.stringify(data, null, 2), 'utf-8');
 }
+
 
 export async function initDatabase(): Promise<void> {
   ensureDataDirectory();
