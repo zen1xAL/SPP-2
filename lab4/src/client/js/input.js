@@ -1,6 +1,7 @@
 export class InputController {
   constructor() {
     this.keysDown = new Set();
+    this.keyStack = [];
     this.currentDirection = 'UP';
     this.isMoving = false;
     this.sequence = 0;
@@ -33,17 +34,25 @@ export class InputController {
       const dir = this.keyToDirection(e.key);
       if (dir) {
         this.keysDown.add(e.key.toLowerCase());
+        this.keyStack = this.keyStack.filter((d) => d !== dir);
+        this.keyStack.push(dir);
         this.updateMovement();
       }
     });
 
     window.addEventListener('keyup', (e) => {
+      const dir = this.keyToDirection(e.key);
       this.keysDown.delete(e.key.toLowerCase());
+      if (dir) {
+        this.keyStack = this.keyStack.filter((d) => d !== dir);
+      }
       this.updateMovement();
     });
 
     window.addEventListener('blur', () => {
       this.keysDown.clear();
+      this.keyStack = [];
+      this.activeTouchDir = null;
       this.updateMovement();
     });
 
@@ -69,13 +78,10 @@ export class InputController {
   updateMovement() {
     let nextDir = null;
 
-    if (this.keysDown.has('w') || this.keysDown.has('arrowup')) nextDir = 'UP';
-    else if (this.keysDown.has('s') || this.keysDown.has('arrowdown')) nextDir = 'DOWN';
-    else if (this.keysDown.has('a') || this.keysDown.has('arrowleft')) nextDir = 'LEFT';
-    else if (this.keysDown.has('d') || this.keysDown.has('arrowright')) nextDir = 'RIGHT';
-
     if (this.activeTouchDir) {
       nextDir = this.activeTouchDir;
+    } else if (this.keyStack.length > 0) {
+      nextDir = this.keyStack[this.keyStack.length - 1];
     }
 
     const wasMoving = this.isMoving;

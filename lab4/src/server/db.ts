@@ -38,6 +38,8 @@ interface LocalStoreData {
   matches: PersistentMatch[];
 }
 
+let inMemoryStore: LocalStoreData | null = null;
+
 function ensureDataDirectory(): void {
   if (!fs.existsSync(CONFIG.DATA_DIR)) {
     fs.mkdirSync(CONFIG.DATA_DIR, { recursive: true });
@@ -45,23 +47,35 @@ function ensureDataDirectory(): void {
 }
 
 function readLocalStore(): LocalStoreData {
+  if (inMemoryStore) {
+    return inMemoryStore;
+  }
   ensureDataDirectory();
   if (!fs.existsSync(localFilePath)) {
-    const initial: LocalStoreData = { players: {}, matches: [] };
-    fs.writeFileSync(localFilePath, JSON.stringify(initial, null, 2), 'utf-8');
-    return initial;
+    inMemoryStore = { players: {}, matches: [] };
+    try {
+      fs.writeFileSync(localFilePath, JSON.stringify(inMemoryStore, null, 2), 'utf-8');
+    } catch {}
+    return inMemoryStore;
   }
   try {
     const raw = fs.readFileSync(localFilePath, 'utf-8');
-    return JSON.parse(raw) as LocalStoreData;
+    inMemoryStore = JSON.parse(raw) as LocalStoreData;
+    if (!inMemoryStore.players) inMemoryStore.players = {};
+    if (!inMemoryStore.matches) inMemoryStore.matches = [];
+    return inMemoryStore;
   } catch {
-    return { players: {}, matches: [] };
+    inMemoryStore = { players: {}, matches: [] };
+    return inMemoryStore;
   }
 }
 
 function writeLocalStore(data: LocalStoreData): void {
+  inMemoryStore = data;
   ensureDataDirectory();
-  fs.writeFileSync(localFilePath, JSON.stringify(data, null, 2), 'utf-8');
+  try {
+    fs.writeFileSync(localFilePath, JSON.stringify(data, null, 2), 'utf-8');
+  } catch {}
 }
 
 
@@ -176,7 +190,7 @@ export async function savePlayerStats(name: string, stats: PlayerStats, won: boo
     existing.totalBonusesCollected += stats.bonusesCollected;
     existing.lastPlayedAt = now;
     writeLocalStore(store);
-    return existing;
+    return { ...existing };
   }
 
   const newPlayer: PersistentPlayer = {
@@ -195,7 +209,7 @@ export async function savePlayerStats(name: string, stats: PlayerStats, won: boo
 
   store.players[cleanName] = newPlayer;
   writeLocalStore(store);
-  return newPlayer;
+  return { ...newPlayer };
 }
 
 export async function recordMatch(

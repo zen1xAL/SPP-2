@@ -99,4 +99,27 @@ describe('CyberTanks Map and Physics System', () => {
     const moveCloser = moveWithSlide(myStartX, myStartY, -5, 0, map.grid, 'my-tank', [otherTank]);
     expect(moveCloser.x).toBe(105);
   });
+
+  it('smoothly rounds corners and assists turn when slightly misaligned', () => {
+    // 3x3 grid:
+    // row 0: [Wall (1), Corridor (0), Wall (1)]
+    // row 1: [Corridor (0), Corridor (0), Corridor (0)]
+    // row 2: [Wall (1), Corridor (0), Wall (1)]
+    const grid = [
+      [1, 0, 1],
+      [0, 0, 0],
+      [1, 0, 1]
+    ];
+    // Tile size is 40.
+    // Center of column 1 is 60 (from 40 to 80).
+    // Center of row 1 is 60 (from 40 to 80).
+    // Tank is at (x = 52, y = 45) - 8px to the left of the column center (60).
+    // Moving UP (deltaX = 0, deltaY = -5) would enter row 0:
+    // Without corner assist, left edge (52 - 13 = 39) would hit tile (0, 0) which is a Wall (1).
+    // With corner assist, it nudges X towards 60 and successfully moves UP!
+    const res = moveWithSlide(52, 45, 0, -5, grid, 't1', []);
+    expect(res.x).toBeGreaterThan(52);
+    expect(res.y).toBeLessThan(45);
+  });
 });
+

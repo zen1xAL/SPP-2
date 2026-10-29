@@ -23,3 +23,7 @@
 # Documentation
 **/docs/
 
+# Course project local files
+courseproj/
+
+
