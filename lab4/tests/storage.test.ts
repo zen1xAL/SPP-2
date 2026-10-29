@@ -8,6 +8,10 @@ import {
   closeDatabase
 } from '../src/server/db.js';
 
+import fs from 'node:fs';
+import path from 'node:path';
+import { CONFIG } from '../src/server/config.js';
+
 describe('CyberTanks Persistent Storage System', () => {
   beforeAll(async () => {
     await initDatabase();
@@ -15,6 +19,16 @@ describe('CyberTanks Persistent Storage System', () => {
 
   afterAll(async () => {
     await closeDatabase();
+    try {
+      const storeFile = path.join(CONFIG.DATA_DIR, 'game_store.json');
+      if (fs.existsSync(storeFile)) {
+        const store = JSON.parse(fs.readFileSync(storeFile, 'utf-8'));
+        delete store.players['TestWarrior'];
+        delete store.players['TopSniper'];
+        store.matches = store.matches.filter((m: { winnerName: string }) => m.winnerName !== 'TestWarrior');
+        fs.writeFileSync(storeFile, JSON.stringify(store, null, 2), 'utf-8');
+      }
+    } catch {}
   });
 
   it('persists player stats and aggregates score and kills', async () => {

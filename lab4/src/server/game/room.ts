@@ -217,6 +217,16 @@ export class GameRoom {
     this.inputStates.delete(id);
   }
 
+  public async flushStats(): Promise<void> {
+    const promises: Promise<unknown>[] = [];
+    for (const tank of this.tanks.values()) {
+      if (!tank.sessionId.startsWith('bot-')) {
+        promises.push(savePlayerStats(tank.name, tank.stats, false));
+      }
+    }
+    await Promise.allSettled(promises);
+  }
+
   public handleInput(id: string, direction: Direction, isMoving: boolean, sequence: number): void {
     const tank = this.tanks.get(id);
     if (!tank || !tank.isAlive) return;
@@ -334,6 +344,13 @@ export class GameRoom {
                 killer.stats.score += 100;
                 this.totalMatchKills += 1;
                 this.broadcastKill(killer.id, killer.name, tank.id, tank.name);
+                if (!killer.sessionId.startsWith('bot-')) {
+                  savePlayerStats(killer.name, killer.stats, false).catch(() => {});
+                }
+              }
+
+              if (!tank.sessionId.startsWith('bot-')) {
+                savePlayerStats(tank.name, tank.stats, false).catch(() => {});
               }
 
               setTimeout(() => this.respawnTank(tank.id), 3000);

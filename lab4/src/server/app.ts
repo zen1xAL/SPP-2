@@ -46,6 +46,12 @@ export function createApp(getRoom?: () => GameRoom): express.Express {
 
   app.get('/api/leaderboard', async (_req: Request, res: Response) => {
     try {
+      if (getRoom) {
+        const room = getRoom();
+        if (room && typeof room.flushStats === 'function') {
+          await room.flushStats();
+        }
+      }
       const top = await getLeaderboard(15);
       res.json({ leaderboard: top });
     } catch (err) {
