@@ -13,8 +13,8 @@ async function bootstrap(): Promise<void> {
 
   wsHandler = new WebSocketHandler(server);
 
-  server.listen(CONFIG.PORT, () => {
-    process.stdout.write(`[CyberTanks] Сервер запущен на http://localhost:${CONFIG.PORT}\n`);
+  server.listen(CONFIG.PORT, '0.0.0.0', () => {
+    process.stdout.write(`[CyberTanks] Сервер запущен на http://0.0.0.0:${CONFIG.PORT}\n`);
     process.stdout.write(`[CyberTanks] WebSocket эндпоинт ws://localhost:${CONFIG.PORT}/ws\n`);
   });
 
