@@ -1,11 +1,12 @@
 import { CONFIG } from '../config.js';
 import type { Direction, Position, Tank } from './types.js';
+import { DIRECTION_VECTORS } from './constants.js';
 
 export const COLLISION_CONFIG = {
   TANK_BOX_SIZE: 26,
   CORNER_ASSIST_PX: 14,
   EPSILON: 0.001
-};
+} as const;
 
 export interface BoundingBox {
   left: number;
@@ -14,7 +15,11 @@ export interface BoundingBox {
   bottom: number;
 }
 
-export function getTankBox(x: number, y: number, size = COLLISION_CONFIG.TANK_BOX_SIZE): BoundingBox {
+export function getTankBox(
+  x: number,
+  y: number,
+  size = COLLISION_CONFIG.TANK_BOX_SIZE
+): BoundingBox {
   const half = size / 2;
   return {
     left: x - half,
@@ -24,7 +29,11 @@ export function getTankBox(x: number, y: number, size = COLLISION_CONFIG.TANK_BO
   };
 }
 
-export function getTileBox(tileX: number, tileY: number, tileSize = CONFIG.TILE_SIZE): BoundingBox {
+export function getTileBox(
+  tileX: number,
+  tileY: number,
+  tileSize = CONFIG.TILE_SIZE
+): BoundingBox {
   return {
     left: tileX * tileSize,
     right: (tileX + 1) * tileSize,
@@ -63,7 +72,11 @@ export function checkWallCollision(grid: number[][], box: BoundingBox): boolean 
   return false;
 }
 
-export function checkTankTankCollision(tankId: string, box: BoundingBox, otherTanks: Tank[]): boolean {
+export function checkTankTankCollision(
+  tankId: string,
+  box: BoundingBox,
+  otherTanks: Tank[]
+): boolean {
   for (const other of otherTanks) {
     if (other.id === tankId || !other.isAlive) continue;
     const otherBox = getTankBox(other.x, other.y);
@@ -75,16 +88,55 @@ export function checkTankTankCollision(tankId: string, box: BoundingBox, otherTa
 }
 
 export function getDirectionVector(dir: Direction): Position {
-  switch (dir) {
-    case 'UP':
-      return { x: 0, y: -1 };
-    case 'RIGHT':
-      return { x: 1, y: 0 };
-    case 'DOWN':
-      return { x: 0, y: 1 };
-    case 'LEFT':
-      return { x: -1, y: 0 };
+  return DIRECTION_VECTORS[dir];
+}
+
+function evaluateCornerAssist(
+  mainDelta: number,
+  crossCoord: number,
+  currentMain: number,
+  targetMain: number,
+  ts: number,
+  isVertical: boolean,
+  canMoveTo: (box: BoundingBox, x: number, y: number) => boolean
+): Position | null {
+  const currentTileCross = Math.floor(crossCoord / ts);
+  const candidates = [
+    (currentTileCross + 0.5) * ts,
+    (currentTileCross - 1 + 0.5) * ts,
+    (currentTileCross + 1 + 0.5) * ts
+  ].sort((a, b) => Math.abs(a - crossCoord) - Math.abs(b - crossCoord));
+
+  for (const candCross of candidates) {
+    const dist = Math.abs(candCross - crossCoord);
+    if (dist > COLLISION_CONFIG.CORNER_ASSIST_PX) continue;
+
+    const testX = isVertical ? candCross : targetMain;
+    const testY = isVertical ? targetMain : candCross;
+    const candBox = getTankBox(testX, testY);
+
+    if (canMoveTo(candBox, testX, testY)) {
+      const maxSlide = Math.abs(mainDelta);
+      const nudge = Math.sign(candCross - crossCoord) * Math.min(dist, maxSlide);
+      const newCross = crossCoord + nudge;
+
+      const fullX = isVertical ? newCross : targetMain;
+      const fullY = isVertical ? targetMain : newCross;
+      const testFull = getTankBox(fullX, fullY);
+      if (canMoveTo(testFull, fullX, fullY)) {
+        return { x: fullX, y: fullY };
+      }
+
+      const slideX = isVertical ? newCross : currentMain;
+      const slideY = isVertical ? currentMain : newCross;
+      const testSlide = getTankBox(slideX, slideY);
+      if (canMoveTo(testSlide, slideX, slideY)) {
+        return { x: slideX, y: slideY };
+      }
+    }
   }
+
+  return null;
 }
 
 export function moveWithSlide(
@@ -98,7 +150,11 @@ export function moveWithSlide(
 ): Position {
   const ts = CONFIG.TILE_SIZE;
   const currentBox = getTankBox(currentX, currentY);
-  const alreadyInTankCollision = checkTankTankCollision(tankId, currentBox, otherTanks);
+  const alreadyInTankCollision = checkTankTankCollision(
+    tankId,
+    currentBox,
+    otherTanks
+  );
 
   const canMoveTo = (box: BoundingBox, tx: number, ty: number): boolean => {
     if (checkWallCollision(grid, box)) return false;
@@ -136,65 +192,33 @@ export function moveWithSlide(
     }
   }
 
-  const cornerAssistPx = COLLISION_CONFIG.CORNER_ASSIST_PX;
-
   if (deltaY !== 0 && deltaX === 0) {
-    const currentTileX = Math.floor(currentX / ts);
-    const candidateColumns = [
-      (currentTileX + 0.5) * ts,
-      (currentTileX - 1 + 0.5) * ts,
-      (currentTileX + 1 + 0.5) * ts
-    ].sort((a, b) => Math.abs(a - currentX) - Math.abs(b - currentX));
-
-    for (const candX of candidateColumns) {
-      const dist = Math.abs(candX - currentX);
-      if (dist <= cornerAssistPx) {
-        const candVerticalBox = getTankBox(candX, targetY);
-        if (canMoveTo(candVerticalBox, candX, targetY)) {
-          const maxSlide = Math.abs(deltaY);
-          const nudge = Math.sign(candX - currentX) * Math.min(dist, maxSlide);
-          const newX = currentX + nudge;
-
-          const testFull = getTankBox(newX, targetY);
-          if (canMoveTo(testFull, newX, targetY)) {
-            return { x: newX, y: targetY };
-          }
-          const testSlideX = getTankBox(newX, currentY);
-          if (canMoveTo(testSlideX, newX, currentY)) {
-            return { x: newX, y: currentY };
-          }
-        }
-      }
+    const verticalAssist = evaluateCornerAssist(
+      deltaY,
+      currentX,
+      currentY,
+      targetY,
+      ts,
+      true,
+      canMoveTo
+    );
+    if (verticalAssist) {
+      return verticalAssist;
     }
   }
 
   if (deltaX !== 0 && deltaY === 0) {
-    const currentTileY = Math.floor(currentY / ts);
-    const candidateRows = [
-      (currentTileY + 0.5) * ts,
-      (currentTileY - 1 + 0.5) * ts,
-      (currentTileY + 1 + 0.5) * ts
-    ].sort((a, b) => Math.abs(a - currentY) - Math.abs(b - currentY));
-
-    for (const candY of candidateRows) {
-      const dist = Math.abs(candY - currentY);
-      if (dist <= cornerAssistPx) {
-        const candHorizontalBox = getTankBox(targetX, candY);
-        if (canMoveTo(candHorizontalBox, targetX, candY)) {
-          const maxSlide = Math.abs(deltaX);
-          const nudge = Math.sign(candY - currentY) * Math.min(dist, maxSlide);
-          const newY = currentY + nudge;
-
-          const testFull = getTankBox(targetX, newY);
-          if (canMoveTo(testFull, targetX, newY)) {
-            return { x: targetX, y: newY };
-          }
-          const testSlideY = getTankBox(currentX, newY);
-          if (canMoveTo(testSlideY, currentX, newY)) {
-            return { x: currentX, y: newY };
-          }
-        }
-      }
+    const horizontalAssist = evaluateCornerAssist(
+      deltaX,
+      currentY,
+      currentX,
+      targetX,
+      ts,
+      false,
+      canMoveTo
+    );
+    if (horizontalAssist) {
+      return horizontalAssist;
     }
   }
 
@@ -210,4 +234,3 @@ export function moveWithSlide(
 
   return { x: currentX, y: currentY };
 }
-

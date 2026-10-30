@@ -1,3 +1,19 @@
+import { THEME } from './constants.js';
+
+const BARREL_OFFSETS = {
+  UP: { x: -2, y: -20, w: 4, h: 14 },
+  DOWN: { x: -2, y: 0, w: 4, h: 14 },
+  LEFT: { x: -20, y: -2, w: 14, h: 4 },
+  RIGHT: { x: 0, y: -2, w: 14, h: 4 }
+};
+
+const BONUS_VISUALS = {
+  SHIELD: { color: THEME.BONUS_SHIELD, halo: 'rgba(56, 189, 248, 0.35)', symbol: 'S' },
+  RAPID_FIRE: { color: THEME.BONUS_RAPID, halo: 'rgba(245, 158, 11, 0.35)', symbol: 'R' },
+  SPEED_BOOST: { color: THEME.BONUS_SPEED, halo: 'rgba(16, 185, 129, 0.35)', symbol: '>' },
+  NUKE: { color: THEME.BONUS_NUKE, halo: 'rgba(239, 68, 68, 0.35)', symbol: 'N' }
+};
+
 export class CanvasRenderer {
   constructor(canvas) {
     this.canvas = canvas;
@@ -37,7 +53,7 @@ export class CanvasRenderer {
     const bgCtx = this.bgCanvas.getContext('2d');
     bgCtx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
 
-    bgCtx.fillStyle = '#060a12';
+    bgCtx.fillStyle = THEME.BG_SOLID;
     bgCtx.fillRect(0, 0, w, h);
 
     this.renderFloorGrid(bgCtx, map.width, map.height, map.tileSize);
@@ -46,7 +62,7 @@ export class CanvasRenderer {
   }
 
   renderFloorGrid(ctx, width, height, ts) {
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+    ctx.strokeStyle = THEME.GRID_LINE;
     ctx.lineWidth = 1;
 
     for (let x = 0; x <= width; x++) {
@@ -71,13 +87,13 @@ export class CanvasRenderer {
           const px = x * ts;
           const py = y * ts;
 
-          ctx.fillStyle = '#1e293b';
+          ctx.fillStyle = THEME.WALL_STEEL_FILL;
           ctx.fillRect(px, py, ts, ts);
 
           ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
           ctx.strokeRect(px + 1, py + 1, ts - 2, ts - 2);
 
-          ctx.fillStyle = '#334155';
+          ctx.fillStyle = THEME.WALL_STEEL_CORE;
           ctx.fillRect(px + 4, py + 4, ts - 8, ts - 8);
         }
       }
@@ -91,10 +107,10 @@ export class CanvasRenderer {
           const px = x * ts;
           const py = y * ts;
 
-          ctx.fillStyle = '#854d0e';
+          ctx.fillStyle = THEME.WALL_BRICK_FILL;
           ctx.fillRect(px, py, ts, ts);
 
-          ctx.strokeStyle = '#ca8a04';
+          ctx.strokeStyle = THEME.WALL_BRICK_STROKE;
           ctx.lineWidth = 1;
           ctx.strokeRect(px + 1, py + 1, ts - 2, ts - 2);
 
@@ -109,7 +125,7 @@ export class CanvasRenderer {
     }
   }
 
-  addExplosion(x, y, color = '#f59e0b', count = 10) {
+  addExplosion(x, y, color = THEME.EXPLOSION_DEFAULT, count = 10) {
     for (let i = 0; i < count; i++) {
       const angle = Math.random() * Math.PI * 2;
       const speed = 40 + Math.random() * 80;
@@ -170,61 +186,39 @@ export class CanvasRenderer {
       ctx.translate(tank.x, tank.y);
 
       if (tank.shieldUntil > now) {
-        ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
+        ctx.strokeStyle = THEME.SHIELD_HALO;
         ctx.lineWidth = 4;
         ctx.beginPath();
         ctx.arc(0, 0, half + 8, 0, Math.PI * 2);
         ctx.stroke();
 
-        ctx.strokeStyle = '#38bdf8';
+        ctx.strokeStyle = THEME.SHIELD_RING;
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.arc(0, 0, half + 7, 0, Math.PI * 2);
         ctx.stroke();
       }
 
-      ctx.fillStyle = '#0f172a';
+      ctx.fillStyle = THEME.TREADS;
       ctx.fillRect(-half - 2, -half, 4, size);
       ctx.fillRect(half - 2, -half, 4, size);
 
       ctx.fillStyle = tank.color;
-      ctx.strokeStyle = '#ffffff';
+      ctx.strokeStyle = THEME.BODY_STROKE;
       ctx.lineWidth = 1;
       ctx.beginPath();
       this.drawRoundRect(ctx, -half, -half, size, size, 4);
       ctx.fill();
       ctx.stroke();
 
-      ctx.fillStyle = '#0f172a';
+      ctx.fillStyle = THEME.TREADS;
       ctx.beginPath();
       ctx.arc(0, 0, 6, 0, Math.PI * 2);
       ctx.fill();
 
-      let barrelDx = 0;
-      let barrelDy = 0;
-      let bw = 4;
-      let bh = 14;
-
-      if (tank.direction === 'UP') {
-        barrelDx = -bw / 2;
-        barrelDy = -half - 5;
-      } else if (tank.direction === 'DOWN') {
-        barrelDx = -bw / 2;
-        barrelDy = 0;
-      } else if (tank.direction === 'LEFT') {
-        barrelDx = -half - 5;
-        barrelDy = -bw / 2;
-        bw = 14;
-        bh = 4;
-      } else if (tank.direction === 'RIGHT') {
-        barrelDx = 0;
-        barrelDy = -bw / 2;
-        bw = 14;
-        bh = 4;
-      }
-
-      ctx.fillStyle = '#f8fafc';
-      ctx.fillRect(barrelDx, barrelDy, bw, bh);
+      const barrel = BARREL_OFFSETS[tank.direction] || BARREL_OFFSETS.UP;
+      ctx.fillStyle = THEME.BARREL;
+      ctx.fillRect(barrel.x, barrel.y, barrel.w, barrel.h);
 
       ctx.restore();
 
@@ -244,7 +238,7 @@ export class CanvasRenderer {
       ctx.fillStyle = '#1e293b';
       ctx.fillRect(barX, barY, barW, barH);
 
-      ctx.fillStyle = hpPercent > 0.5 ? '#10b981' : hpPercent > 0.25 ? '#f59e0b' : '#ef4444';
+      ctx.fillStyle = hpPercent > 0.5 ? THEME.HEALTH_HIGH : hpPercent > 0.25 ? THEME.HEALTH_MID : THEME.HEALTH_LOW;
       ctx.fillRect(barX, barY, barW * hpPercent, barH);
     }
   }
@@ -271,21 +265,16 @@ export class CanvasRenderer {
       const size = 18 + pulse;
       const half = size / 2;
 
-      let color = '#38bdf8';
-      let halo = 'rgba(56, 189, 248, 0.35)';
-      let symbol = 'S';
-      if (b.type === 'RAPID_FIRE') { color = '#f59e0b'; halo = 'rgba(245, 158, 11, 0.35)'; symbol = 'R'; }
-      else if (b.type === 'SPEED_BOOST') { color = '#10b981'; halo = 'rgba(16, 185, 129, 0.35)'; symbol = '>'; }
-      else if (b.type === 'NUKE') { color = '#ef4444'; halo = 'rgba(239, 68, 68, 0.35)'; symbol = 'N'; }
+      const visual = BONUS_VISUALS[b.type] || BONUS_VISUALS.SHIELD;
 
-      ctx.strokeStyle = halo;
+      ctx.strokeStyle = visual.halo;
       ctx.lineWidth = 4;
       ctx.beginPath();
       this.drawRoundRect(ctx, b.x - half - 1, b.y - half - 1, size + 2, size + 2, 5);
       ctx.stroke();
 
       ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
-      ctx.strokeStyle = color;
+      ctx.strokeStyle = visual.color;
       ctx.lineWidth = 2;
 
       ctx.beginPath();
@@ -293,11 +282,11 @@ export class CanvasRenderer {
       ctx.fill();
       ctx.stroke();
 
-      ctx.fillStyle = color;
+      ctx.fillStyle = visual.color;
       ctx.font = '700 11px Inter, monospace';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(symbol, b.x, b.y);
+      ctx.fillText(visual.symbol, b.x, b.y);
     }
   }
 

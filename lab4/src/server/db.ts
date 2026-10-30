@@ -172,9 +172,7 @@ export async function savePlayerStats(name: string, stats: PlayerStats, won: boo
         createdAt: row.created_at,
         lastPlayedAt: row.last_played_at
       };
-    } catch {
-      // Fallback to local
-    }
+    } catch {}
   }
 
   const store = readLocalStore();
@@ -235,9 +233,7 @@ export async function recordMatch(
         [match.id, match.winnerName, match.durationSeconds, match.totalKills, match.totalWallsDestroyed, match.createdAt]
       );
       return match;
-    } catch {
-      // Fallback
-    }
+    } catch {}
   }
 
   const store = readLocalStore();
@@ -269,9 +265,7 @@ export async function getLeaderboard(limit = 10): Promise<PersistentPlayer[]> {
         createdAt: row.created_at,
         lastPlayedAt: row.last_played_at
       }));
-    } catch {
-      // Fallback
-    }
+    } catch {}
   }
 
   const store = readLocalStore();
@@ -295,9 +289,7 @@ export async function getRecentMatches(limit = 10): Promise<PersistentMatch[]> {
         totalWallsDestroyed: row.total_walls_destroyed,
         createdAt: row.created_at
       }));
-    } catch {
-      // Fallback
-    }
+    } catch {}
   }
 
   const store = readLocalStore();

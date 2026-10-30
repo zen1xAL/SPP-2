@@ -1,0 +1,56 @@
+export const KEY_DIRECTION_MAP = {
+  w: 'UP',
+  arrowup: 'UP',
+  s: 'DOWN',
+  arrowdown: 'DOWN',
+  a: 'LEFT',
+  arrowleft: 'LEFT',
+  d: 'RIGHT',
+  arrowright: 'RIGHT'
+};
+
+export const DIRECTION_VECTORS = {
+  UP: { x: 0, y: -1 },
+  DOWN: { x: 0, y: 1 },
+  LEFT: { x: -1, y: 0 },
+  RIGHT: { x: 1, y: 0 }
+};
+
+export const CLIENT_CONFIG = {
+  BASE_SPEED: 130,
+  BOOST_MULTIPLIER: 1.45,
+  TANK_HALF_SIZE: 15,
+  TANK_RENDER_SIZE: 30,
+  CORRECTION_THRESHOLD: 30,
+  DRIFT_CORRECTION_THRESHOLD: 1,
+  DEFAULT_LERP_FACTOR: 24,
+  DRIFT_LERP_FACTOR: 12,
+  RESERVED_MOBILE_HEIGHT: 150,
+  RESERVED_DESKTOP_HEIGHT: 20,
+  MIN_VIEWPORT_WIDTH: 260,
+  MIN_VIEWPORT_HEIGHT: 180,
+  MOBILE_BREAKPOINT: 768
+};
+
+export const THEME = {
+  HEALTH_HIGH: '#10b981',
+  HEALTH_MID: '#f59e0b',
+  HEALTH_LOW: '#ef4444',
+  SHIELD_HALO: 'rgba(56, 189, 248, 0.4)',
+  SHIELD_RING: '#38bdf8',
+  BARREL: '#f8fafc',
+  BODY_STROKE: '#ffffff',
+  TREADS: '#0f172a',
+  GRID_LINE: 'rgba(255, 255, 255, 0.03)',
+  BG_SOLID: '#060a12',
+  WALL_STEEL_FILL: '#1e293b',
+  WALL_STEEL_CORE: '#334155',
+  WALL_BRICK_FILL: '#854d0e',
+  WALL_BRICK_STROKE: '#ca8a04',
+  EXPLOSION_DEFAULT: '#f59e0b',
+  EXPLOSION_BRICK: '#ca8a04',
+  BONUS_SHIELD: '#38bdf8',
+  BONUS_RAPID: '#f59e0b',
+  BONUS_SPEED: '#10b981',
+  BONUS_NUKE: '#ef4444'
+};

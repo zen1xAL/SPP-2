@@ -2,6 +2,7 @@ import { CanvasRenderer } from './renderer.js';
 import { InputController } from './input.js';
 import { NetworkClient } from './network.js';
 import { UIManager } from './ui.js';
+import { CLIENT_CONFIG, DIRECTION_VECTORS, THEME } from './constants.js';
 
 export class GameApp {
   constructor() {
@@ -70,10 +71,10 @@ export class GameApp {
         this.ui.showConflictNotification(event, this.localPlayerId);
       },
       onKill: (msg) => {
-        if (msg.victimId === this.localPlayerId) {
-          if (navigator.vibrate) {
-            try { navigator.vibrate([100, 50, 100]); } catch {}
-          }
+        if (msg.victimId === this.localPlayerId && navigator.vibrate) {
+          try {
+            navigator.vibrate([100, 50, 100]);
+          } catch {}
         }
       },
       onPing: (pingMs) => {
@@ -117,16 +118,6 @@ export class GameApp {
     });
   }
 
-  getDirectionVec(dir) {
-    switch (dir) {
-      case 'UP': return { x: 0, y: -1 };
-      case 'DOWN': return { x: 0, y: 1 };
-      case 'LEFT': return { x: -1, y: 0 };
-      case 'RIGHT': return { x: 1, y: 0 };
-      default: return { x: 0, y: 0 };
-    }
-  }
-
   setupCanvasDimensions() {
     if (!this.map) return;
     const arenaW = this.map.width * this.map.tileSize;
@@ -136,11 +127,13 @@ export class GameApp {
     const viewport = document.querySelector('.arena-viewport');
     if (viewport) {
       const isPortrait = window.innerHeight > window.innerWidth;
-      const isMobile = window.innerWidth <= 768;
+      const isMobile = window.innerWidth <= CLIENT_CONFIG.MOBILE_BREAKPOINT;
 
-      const reservedH = isMobile && isPortrait ? 150 : 20;
-      const availableW = Math.max(260, viewport.clientWidth - 16);
-      const availableH = Math.max(180, viewport.clientHeight - reservedH);
+      const reservedH = isMobile && isPortrait
+        ? CLIENT_CONFIG.RESERVED_MOBILE_HEIGHT
+        : CLIENT_CONFIG.RESERVED_DESKTOP_HEIGHT;
+      const availableW = Math.max(CLIENT_CONFIG.MIN_VIEWPORT_WIDTH, viewport.clientWidth - 16);
+      const availableH = Math.max(CLIENT_CONFIG.MIN_VIEWPORT_HEIGHT, viewport.clientHeight - reservedH);
 
       const scale = Math.min(availableW / arenaW, availableH / arenaH);
       const displayW = Math.floor(arenaW * scale);
@@ -160,7 +153,7 @@ export class GameApp {
             this.map.grid[w.y][w.x] = 0;
             const cx = w.x * this.map.tileSize + this.map.tileSize / 2;
             const cy = w.y * this.map.tileSize + this.map.tileSize / 2;
-            this.renderer.addExplosion(cx, cy, '#ca8a04', 12);
+            this.renderer.addExplosion(cx, cy, THEME.EXPLOSION_BRICK, 12);
           }
         }
       }
@@ -215,7 +208,7 @@ export class GameApp {
     if (!this.map || !this.map.grid) return true;
     const nextX = curX + dirVec.x * step;
     const nextY = curY + dirVec.y * step;
-    const half = 15;
+    const half = CLIENT_CONFIG.TANK_HALF_SIZE;
     const ts = this.map.tileSize;
 
     const minTx = Math.floor((nextX - half) / ts);
@@ -246,14 +239,15 @@ export class GameApp {
 
       const tanksToRender = [];
       const now = Date.now();
-      const lerpSpeed = Math.min(1.0, 24 * dt);
+      const lerpSpeed = Math.min(1.0, CLIENT_CONFIG.DEFAULT_LERP_FACTOR * dt);
 
       for (const [id, rt] of this.renderTanks.entries()) {
         if (!rt.isAlive) continue;
 
         if (id === this.localPlayerId && this.input.isMoving) {
-          const dirVec = this.getDirectionVec(this.input.currentDirection);
-          const speed = rt.speedUntil > now ? 130 * 1.45 : 130;
+          const dirVec = DIRECTION_VECTORS[this.input.currentDirection] || { x: 0, y: 0 };
+          const speedMultiplier = rt.speedUntil > now ? CLIENT_CONFIG.BOOST_MULTIPLIER : 1.0;
+          const speed = CLIENT_CONFIG.BASE_SPEED * speedMultiplier;
           const step = speed * dt;
 
           if (this.canMoveClient(rt.renderX, rt.renderY, dirVec, step)) {
@@ -262,12 +256,13 @@ export class GameApp {
           }
 
           const distToServer = Math.hypot(rt.targetX - rt.renderX, rt.targetY - rt.renderY);
-          if (distToServer > 30) {
+          if (distToServer > CLIENT_CONFIG.CORRECTION_THRESHOLD) {
             rt.renderX = rt.targetX;
             rt.renderY = rt.targetY;
-          } else if (distToServer > 1) {
-            rt.renderX += (rt.targetX - rt.renderX) * Math.min(1.0, 12 * dt);
-            rt.renderY += (rt.targetY - rt.renderY) * Math.min(1.0, 12 * dt);
+          } else if (distToServer > CLIENT_CONFIG.DRIFT_CORRECTION_THRESHOLD) {
+            const driftLerp = Math.min(1.0, CLIENT_CONFIG.DRIFT_LERP_FACTOR * dt);
+            rt.renderX += (rt.targetX - rt.renderX) * driftLerp;
+            rt.renderY += (rt.targetY - rt.renderY) * driftLerp;
           }
         } else {
           rt.renderX += (rt.targetX - rt.renderX) * lerpSpeed;

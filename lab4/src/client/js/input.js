@@ -1,3 +1,5 @@
+import { KEY_DIRECTION_MAP } from './constants.js';
+
 export class InputController {
   constructor() {
     this.keysDown = new Set();
@@ -67,23 +69,11 @@ export class InputController {
   }
 
   keyToDirection(key) {
-    const k = key.toLowerCase();
-    if (k === 'w' || k === 'arrowup') return 'UP';
-    if (k === 's' || k === 'arrowdown') return 'DOWN';
-    if (k === 'a' || k === 'arrowleft') return 'LEFT';
-    if (k === 'd' || k === 'arrowright') return 'RIGHT';
-    return null;
+    return KEY_DIRECTION_MAP[key.toLowerCase()] || null;
   }
 
   updateMovement() {
-    let nextDir = null;
-
-    if (this.activeTouchDir) {
-      nextDir = this.activeTouchDir;
-    } else if (this.keyStack.length > 0) {
-      nextDir = this.keyStack[this.keyStack.length - 1];
-    }
-
+    const nextDir = this.activeTouchDir || (this.keyStack.length > 0 ? this.keyStack[this.keyStack.length - 1] : null);
     const wasMoving = this.isMoving;
     const prevDir = this.currentDirection;
 

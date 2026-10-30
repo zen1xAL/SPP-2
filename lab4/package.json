@@ -11,7 +11,8 @@
     "typecheck": "tsc -p tsconfig.server.json --noEmit",
     "test": "vitest run",
     "verify": "npm run typecheck && npm run test",
-    "tunnel": "npx cloudflared tunnel --url http://localhost:3000"
+    "tunnel": "npx cloudflared tunnel --url http://localhost:3000",
+    "tunnel:dev": ".\\devtunnel.exe host -p 3000 --allow-anonymous"
   },
   "dependencies": {
     "cors": "^2.8.5",
