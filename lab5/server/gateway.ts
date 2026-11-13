@@ -9,6 +9,7 @@ export interface SupergraphSetup {
   gateway: InstanceType<typeof ApolloGateway>;
   supergraphSdl: string;
   subgraphNames: string[];
+  productsSchema: any;
 }
 
 export function createSupergraphGateway(db: DatabaseSync): SupergraphSetup {
@@ -57,6 +58,7 @@ export function createSupergraphGateway(db: DatabaseSync): SupergraphSetup {
   return {
     gateway,
     supergraphSdl: compositionResult.supergraphSdl || '',
-    subgraphNames: ['products', 'reviews', 'inventory']
+    subgraphNames: ['products', 'reviews', 'inventory'],
+    productsSchema
   };
 }

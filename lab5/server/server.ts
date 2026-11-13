@@ -30,7 +30,7 @@ export async function createApp(customDb?: DatabaseSync) {
 
   const httpServer = http.createServer(app);
 
-  const { gateway } = createSupergraphGateway(db);
+  const { gateway, productsSchema } = createSupergraphGateway(db);
 
   const server = new ApolloServer({
     gateway,
@@ -53,7 +53,7 @@ export async function createApp(customDb?: DatabaseSync) {
 
   useServer(
     {
-      schema: gateway.schema!,
+      schema: productsSchema,
       context: async () => ({
         db,
         dataLoaders: createDataLoaders(db)

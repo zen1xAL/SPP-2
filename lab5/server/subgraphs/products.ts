@@ -333,13 +333,16 @@ export function createProductsSubgraph(db: DatabaseSync) {
         },
         Subscription: {
           tickerUpdated: {
-            subscribe: () => pubsub.subscribeTicker()
+            subscribe: () => pubsub.subscribeTicker(),
+            resolve: (payload: any) => payload
           },
           reviewAdded: {
-            subscribe: () => pubsub.subscribeReview()
+            subscribe: () => pubsub.subscribeReview(),
+            resolve: (payload: any) => payload
           },
           stockUpdated: {
-            subscribe: () => pubsub.subscribeStock()
+            subscribe: () => pubsub.subscribeStock(),
+            resolve: (payload: any) => payload
           }
         }
       }

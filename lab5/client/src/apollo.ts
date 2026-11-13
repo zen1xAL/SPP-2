@@ -9,7 +9,7 @@ const httpLink = new HttpLink({
 
 const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 const wsHost = window.location.host;
-const wsUrl = `${wsProtocol}//${wsHost}/graphql`;
+const wsUrl = window.location.port === '5173' ? 'ws://localhost:4000/graphql' : `${wsProtocol}//${wsHost}/graphql`;
 
 const wsLink = new GraphQLWsLink(
   createClient({
