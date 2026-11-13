@@ -91,7 +91,6 @@ export function createReviewsSubgraph(db: DatabaseSync) {
               VALUES (?, ?, ?, ?, ?, ?)
             `).run(id, productId, author, safeRating, comment, createdAt);
 
-            // Обновляем средний рейтинг товара
             const avgRow = db.prepare(`
               SELECT AVG(rating) as avg_rating FROM reviews WHERE product_id = ?
             `).get(productId) as { avg_rating: number };
@@ -101,7 +100,6 @@ export function createReviewsSubgraph(db: DatabaseSync) {
                 .run(Math.round(avgRow.avg_rating * 10) / 10, productId);
             }
 
-            // Публикуем событие для WebSocket-подписчиков
             pubsub.publishReview({
               id,
               productId,

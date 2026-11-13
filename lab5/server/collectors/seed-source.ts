@@ -48,9 +48,7 @@ export function generateBulkData(): GeneratedSeedData {
       created_at: new Date(Date.now() - (400 - i) * 86400000).toISOString()
     });
 
-    // 2. Генерируем 25 исторических срезов цен для КАЖДОГО продукта: 400 * 25 = 10 000 записей price_history!
     for (let h = 0; h < 25; h++) {
-      // Плавное случайное блуждание цены в пределах 20%
       const fluctuationFactor = 1 + Math.sin((i + h) * 0.4) * 0.15;
       const historyPrice = Math.round(basePrice * fluctuationFactor * 100) / 100;
       const historyDate = new Date(Date.now() - (25 - h) * 14 * 86400000).toISOString();
@@ -63,7 +61,6 @@ export function generateBulkData(): GeneratedSeedData {
       });
     }
 
-    // 3. Генерируем по 4-6 отзывов на продукт: ~2000 отзывов
     const reviewCount = 4 + (i % 3);
     for (let r = 1; r <= reviewCount; r++) {
       const reviewRating = Math.max(1, Math.min(5, Math.round(rating + (r % 3 - 1))));
@@ -77,7 +74,6 @@ export function generateBulkData(): GeneratedSeedData {
       });
     }
 
-    // 4. Генерируем остатки по складам: 400 * 4 = 1600 записей
     for (let w = 0; w < warehouses.length; w++) {
       const wh = warehouses[w]!;
       const qty = Math.max(0, ((i * 11 + w * 23) % 150));

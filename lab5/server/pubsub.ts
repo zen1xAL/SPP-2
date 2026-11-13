@@ -51,7 +51,7 @@ function createEventIterator<T>(emitter: EventEmitter, eventName: string): Async
         return { value: queue.shift()!, done: false };
       }
       if (done) {
-        return { value: undefined as any, done: true };
+        return { value: undefined as unknown as T, done: true };
       }
       await new Promise<void>((resolve) => {
         resolveNext = resolve;
@@ -65,7 +65,7 @@ function createEventIterator<T>(emitter: EventEmitter, eventName: string): Async
         resolveNext();
         resolveNext = null;
       }
-      return { value: undefined as any, done: true };
+      return { value: undefined as unknown as T, done: true };
     }
   };
 }

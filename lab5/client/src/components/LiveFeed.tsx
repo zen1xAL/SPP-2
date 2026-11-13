@@ -4,12 +4,10 @@ import { TICKER_SUBSCRIPTION, REVIEW_SUBSCRIPTION, STOCK_SUBSCRIPTION } from '..
 import type { TickerEvent, NewReviewEvent, StockUpdateEvent } from '../types.js';
 import { Radio, ArrowUpRight, ArrowDownRight, MessageSquare, Warehouse, Trash2 } from 'lucide-react';
 
-interface FeedEntry {
-  id: string;
-  type: 'ticker' | 'review' | 'stock';
-  timestamp: string;
-  data: any;
-}
+type FeedEntry =
+  | { id: string; type: 'ticker'; timestamp: string; data: TickerEvent }
+  | { id: string; type: 'review'; timestamp: string; data: NewReviewEvent }
+  | { id: string; type: 'stock'; timestamp: string; data: StockUpdateEvent };
 
 export const LiveFeed: React.FC = () => {
   const [feed, setFeed] = useState<FeedEntry[]>([]);
@@ -31,7 +29,6 @@ export const LiveFeed: React.FC = () => {
     }
   });
 
-  // 2. Подписка на новые отзывы
   useSubscription<{ reviewAdded: NewReviewEvent }>(REVIEW_SUBSCRIPTION, {
     onData: ({ data }) => {
       const item = data.data?.reviewAdded;
@@ -49,7 +46,6 @@ export const LiveFeed: React.FC = () => {
     }
   });
 
-  // 3. Подписка на остатки складов
   useSubscription<{ stockUpdated: StockUpdateEvent }>(STOCK_SUBSCRIPTION, {
     onData: ({ data }) => {
       const item = data.data?.stockUpdated;

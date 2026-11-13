@@ -19,8 +19,8 @@ export const Metrics: React.FC = () => {
   const handleRefresh = async () => {
     try {
       await triggerIngestion({ variables: { forceRefresh: true } });
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : String(err));
     }
   };
 

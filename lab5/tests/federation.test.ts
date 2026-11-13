@@ -67,7 +67,20 @@ describe('Apollo Federation v2 Supergraph Composition & Cross-Subgraph Query', (
     expect(res.body.kind).toBe('single');
     if (res.body.kind === 'single') {
       expect(res.body.singleResult.errors).toBeUndefined();
-      const data = res.body.singleResult.data as any;
+      interface FederatedProductsResponse {
+        products: {
+          edges: Array<{
+            node: {
+              id: string;
+              title: string;
+              price: number;
+              reviews: unknown[];
+              inventory: unknown[];
+            };
+          }>;
+        };
+      }
+      const data = res.body.singleResult.data as unknown as FederatedProductsResponse;
       expect(data.products).toBeDefined();
       expect(data.products.edges.length).toBe(3);
 
@@ -117,7 +130,15 @@ describe('Apollo Federation v2 Supergraph Composition & Cross-Subgraph Query', (
 
     if (res.body.kind === 'single') {
       expect(res.body.singleResult.errors).toBeUndefined();
-      const data = res.body.singleResult.data as any;
+      interface SingleProductResponse {
+        product: {
+          id: string;
+          title: string;
+          reviews: unknown[];
+          inventory: unknown[];
+        };
+      }
+      const data = res.body.singleResult.data as unknown as SingleProductResponse;
       expect(data.product.id).toBe(p.id);
       expect(data.product.title).toBeDefined();
       expect(Array.isArray(data.product.reviews)).toBe(true);

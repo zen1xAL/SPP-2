@@ -76,7 +76,7 @@ describe('Mutations & GraphQL Subscriptions Real-time Events', () => {
     expect(res.body.kind).toBe('single');
     if (res.body.kind === 'single') {
       expect(res.body.singleResult.errors).toBeUndefined();
-      const reviewData = (res.body.singleResult.data as any).addReview;
+      const reviewData = (res.body.singleResult.data as unknown as { addReview: { author: string; rating: number } }).addReview;
       expect(reviewData.author).toBe('Senior QA Tester');
       expect(reviewData.rating).toBe(5);
     }
@@ -119,7 +119,7 @@ describe('Mutations & GraphQL Subscriptions Real-time Events', () => {
 
     if (res.body.kind === 'single') {
       expect(res.body.singleResult.errors).toBeUndefined();
-      const stockData = (res.body.singleResult.data as any).updateStock;
+      const stockData = (res.body.singleResult.data as unknown as { updateStock: { quantity: number; warehouseId: string } }).updateStock;
       expect(stockData.quantity).toBe(42);
       expect(stockData.warehouseId).toBe(warehouse.id);
     }

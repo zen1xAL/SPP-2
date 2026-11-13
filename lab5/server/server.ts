@@ -19,6 +19,11 @@ import { pubsub } from './pubsub.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+export interface ServerContext {
+  db: DatabaseSync;
+  dataLoaders: ReturnType<typeof createDataLoaders>;
+}
+
 export async function createApp(customDb?: DatabaseSync) {
   const db = customDb || getDatabase();
 
@@ -32,7 +37,7 @@ export async function createApp(customDb?: DatabaseSync) {
 
   const { gateway, productsSchema } = createSupergraphGateway(db);
 
-  const server = new ApolloServer({
+  const server = new ApolloServer<ServerContext>({
     gateway,
     plugins: [
       ApolloServerPluginDrainHttpServer({ httpServer }),
@@ -54,7 +59,7 @@ export async function createApp(customDb?: DatabaseSync) {
   useServer(
     {
       schema: productsSchema,
-      context: async () => ({
+      context: async (): Promise<ServerContext> => ({
         db,
         dataLoaders: createDataLoaders(db)
       }),
@@ -65,17 +70,17 @@ export async function createApp(customDb?: DatabaseSync) {
         updateSubscriptionCount(-1);
       }
     },
-    wsServer as any
+    wsServer as unknown as Parameters<typeof useServer>[1]
   );
 
   app.use(
     '/graphql',
-    expressMiddleware(server as any, {
-      context: async () => ({
+    expressMiddleware(server, {
+      context: async (): Promise<ServerContext> => ({
         db,
         dataLoaders: createDataLoaders(db)
       })
-    }) as any
+    }) as unknown as express.RequestHandler
   );
 
   const clientDist = path.resolve(process.cwd(), 'dist/client');
@@ -118,7 +123,6 @@ function startRealtimeTickerGenerator(db: DatabaseSync) {
         timestamp: now
       });
     } catch {
-      // Ignore background errors
     }
   }, 4000);
 }

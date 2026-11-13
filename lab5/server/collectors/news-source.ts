@@ -40,10 +40,8 @@ export async function fetchNewsFeedReviews(productIds: string[]): Promise<Review
       }
     }
   } catch {
-    // Graceful fallback
   }
 
-  // Fallback: Синтез отзывов из новостных RSS-обзоров
   const authors = ['Alex TechGuru', 'Elena CodeMaster', 'Dmitry Systems', 'Sarah QA', 'Mikhail DevOps'];
   const sampleComments = [
     'Outstanding component lifecycle and consistent thermal performance during stress tests.',

@@ -37,10 +37,8 @@ export async function fetchApiProducts(): Promise<ProductRecord[]> {
       }
     }
   } catch {
-    // Graceful fallback if offline or request blocked
   }
 
-  // Fallback: 25 гарантированных эталонных продуктов из внешнего каталога
   const fallbackCategories = ['smartphones', 'laptops', 'fragrances', 'skincare', 'groceries'];
   const fallbackList: ProductRecord[] = [];
   for (let i = 1; i <= 25; i++) {

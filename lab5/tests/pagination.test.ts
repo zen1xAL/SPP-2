@@ -53,13 +53,28 @@ describe('Search, Filtering, Sorting & Relay Cursor Pagination', () => {
     expect(res1.body.kind).toBe('single');
     if (res1.body.kind !== 'single') return;
 
-    const data1 = (res1.body.singleResult.data as any).products;
+    interface PageNode {
+      id: string;
+      title: string;
+    }
+    interface PageResponse {
+      products: {
+        edges: Array<{ cursor: string; node: PageNode }>;
+        pageInfo: {
+          hasNextPage: boolean;
+          hasPreviousPage: boolean;
+          endCursor: string | null;
+        };
+      };
+    }
+
+    const data1 = (res1.body.singleResult.data as unknown as PageResponse).products;
     expect(data1.edges.length).toBe(5);
     expect(data1.pageInfo.hasNextPage).toBe(true);
     expect(data1.pageInfo.hasPreviousPage).toBe(false);
     expect(data1.pageInfo.endCursor).toBeDefined();
 
-    const firstPageIds = data1.edges.map((e: any) => e.node.id);
+    const firstPageIds = data1.edges.map((e) => e.node.id);
 
     const page2Query = `
       query PageTwo($after: String!) {
@@ -85,11 +100,11 @@ describe('Search, Filtering, Sorting & Relay Cursor Pagination', () => {
     );
 
     if (res2.body.kind !== 'single') return;
-    const data2 = (res2.body.singleResult.data as any).products;
+    const data2 = (res2.body.singleResult.data as unknown as PageResponse).products;
     expect(data2.edges.length).toBe(5);
     expect(data2.pageInfo.hasPreviousPage).toBe(true);
 
-    const secondPageIds = data2.edges.map((e: any) => e.node.id);
+    const secondPageIds = data2.edges.map((e) => e.node.id);
 
     for (const id of secondPageIds) {
       expect(firstPageIds).not.toContain(id);
@@ -118,7 +133,17 @@ describe('Search, Filtering, Sorting & Relay Cursor Pagination', () => {
     );
 
     if (res.body.kind === 'single') {
-      const data = (res.body.singleResult.data as any).products;
+      interface FilterResponse {
+        products: {
+          edges: Array<{
+            node: {
+              category: string;
+              price: number;
+            };
+          }>;
+        };
+      }
+      const data = (res.body.singleResult.data as unknown as FilterResponse).products;
       for (const edge of data.edges) {
         expect(edge.node.category).toBe('electronics');
         expect(edge.node.price).toBeGreaterThanOrEqual(100);
@@ -146,9 +171,14 @@ describe('Search, Filtering, Sorting & Relay Cursor Pagination', () => {
     );
 
     if (res.body.kind === 'single') {
-      const edges = (res.body.singleResult.data as any).products.edges;
+      interface SortResponse {
+        products: {
+          edges: Array<{ node: { price: number } }>;
+        };
+      }
+      const edges = (res.body.singleResult.data as unknown as SortResponse).products.edges;
       for (let i = 0; i < edges.length - 1; i++) {
-        expect(edges[i].node.price).toBeLessThanOrEqual(edges[i + 1].node.price);
+        expect(edges[i]!.node.price).toBeLessThanOrEqual(edges[i + 1]!.node.price);
       }
     }
   });
@@ -174,7 +204,17 @@ describe('Search, Filtering, Sorting & Relay Cursor Pagination', () => {
     );
 
     if (res.body.kind === 'single') {
-      const edges = (res.body.singleResult.data as any).products.edges;
+      interface SearchResponse {
+        products: {
+          edges: Array<{
+            node: {
+              title: string;
+              description: string;
+            };
+          }>;
+        };
+      }
+      const edges = (res.body.singleResult.data as unknown as SearchResponse).products.edges;
       expect(edges.length).toBeGreaterThan(0);
       for (const edge of edges) {
         const matches =

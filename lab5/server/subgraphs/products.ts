@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { getDatabaseStats, type ProductRecord, type PriceHistoryRecord } from '../db.js';
 import { getServerMetrics } from '../tracing.js';
 import { runDataIngestion } from '../collectors/ingestion.js';
-import { pubsub } from '../pubsub.js';
+import { pubsub, type TickerEvent, type NewReviewEvent, type StockUpdateEvent } from '../pubsub.js';
 import type { GraphQLDataLoaders } from '../dataloaders.js';
 
 export interface GraphQLContext {
@@ -230,7 +230,6 @@ export function createProductsSubgraph(db: DatabaseSync) {
 
             const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
 
-            // Сортировка
             let sortColumn = 'created_at';
             if (args.sortBy === 'price') sortColumn = 'price';
             else if (args.sortBy === 'rating') sortColumn = 'rating';
@@ -238,11 +237,9 @@ export function createProductsSubgraph(db: DatabaseSync) {
 
             const sortDir = args.sortOrder?.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
 
-            // Подсчет общего количества
             const countSql = `SELECT COUNT(*) as count FROM products ${whereSql}`;
             const totalCount = (db.prepare(countSql).get(...params) as { count: number }).count;
 
-            // Выборка с пагинацией (+1 для hasNextPage)
             const querySql = `
               SELECT * FROM products
               ${whereSql}
@@ -299,13 +296,11 @@ export function createProductsSubgraph(db: DatabaseSync) {
               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             `).run(id, title, description ?? '', price, category, brand, rating, source, createdAt);
 
-            // Начальная точка в истории цен
             db.prepare(`
               INSERT INTO price_history (id, product_id, price, recorded_at)
               VALUES (?, ?, ?, ?)
             `).run(`ph-${id}-init`, id, price, createdAt);
 
-            // Публикуем событие
             pubsub.publishTicker({
               productId: id,
               title,
@@ -334,15 +329,15 @@ export function createProductsSubgraph(db: DatabaseSync) {
         Subscription: {
           tickerUpdated: {
             subscribe: () => pubsub.subscribeTicker(),
-            resolve: (payload: any) => payload
+            resolve: (payload: TickerEvent): TickerEvent => payload
           },
           reviewAdded: {
             subscribe: () => pubsub.subscribeReview(),
-            resolve: (payload: any) => payload
+            resolve: (payload: NewReviewEvent): NewReviewEvent => payload
           },
           stockUpdated: {
             subscribe: () => pubsub.subscribeStock(),
-            resolve: (payload: any) => payload
+            resolve: (payload: StockUpdateEvent): StockUpdateEvent => payload
           }
         }
       }

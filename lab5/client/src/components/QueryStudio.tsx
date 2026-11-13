@@ -14,7 +14,7 @@ export const QueryStudio: React.FC = () => {
   const [includePriceHistory, setIncludePriceHistory] = useState(false);
 
   const [executing, setExecuting] = useState(false);
-  const [queryResult, setQueryResult] = useState<string>('// Нажмите «Выполнить GraphQL запрос» для получения ответа сервера...');
+  const [queryResult, setQueryResult] = useState<string>('Нажмите «Выполнить GraphQL запрос» для получения ответа сервера...');
   const [executionTime, setExecutionTime] = useState<number | null>(null);
 
   const dynamicQueryString = `query DynamicCatalogQuery {
@@ -28,8 +28,7 @@ export const QueryStudio: React.FC = () => {
         category
         rating${includeBrand ? '\n        brand' : ''}${includeDescription ? '\n        description' : ''}${
     includeReviews
-      ? `\n        # Поле из Federated Subgraph: reviews
-        reviews {
+      ? `\n        reviews {
           id
           author
           rating
@@ -38,8 +37,7 @@ export const QueryStudio: React.FC = () => {
       : ''
   }${
     includeInventory
-      ? `\n        # Поле из Federated Subgraph: inventory
-        inventory {
+      ? `\n        inventory {
           warehouseName
           city
           quantity
@@ -47,8 +45,7 @@ export const QueryStudio: React.FC = () => {
       : ''
   }${
     includePriceHistory
-      ? `\n        # Вложенный массив: priceHistory
-        priceHistory {
+      ? `\n        priceHistory {
           price
           recordedAt
         }`
@@ -59,7 +56,6 @@ export const QueryStudio: React.FC = () => {
   }
 }`;
 
-  // Расчет сложности (Complexity & Depth) на клиенте для мгновенной обратной связи
   let estimatedDepth = 4;
   let estimatedCost = 2 + limit * 5;
   if (includeReviews) {
@@ -90,10 +86,11 @@ export const QueryStudio: React.FC = () => {
       const duration = Math.round(performance.now() - startTime);
       setExecutionTime(duration);
       setQueryResult(JSON.stringify(response.data, null, 2));
-    } catch (err: any) {
+    } catch (err: unknown) {
       const duration = Math.round(performance.now() - startTime);
       setExecutionTime(duration);
-      setQueryResult(JSON.stringify({ error: err.message, networkError: err.networkError }, null, 2));
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      setQueryResult(JSON.stringify({ error: errorMessage }, null, 2));
     } finally {
       setExecuting(false);
     }

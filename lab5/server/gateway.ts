@@ -1,5 +1,6 @@
 import { composeServices } from '@apollo/composition';
 import { ApolloGateway, LocalGraphQLDataSource } from '@apollo/gateway';
+import type { GraphQLSchema } from 'graphql';
 import type { DatabaseSync } from 'node:sqlite';
 import { createProductsSubgraph, productsTypeDefs } from './subgraphs/products.js';
 import { createReviewsSubgraph, reviewsTypeDefs } from './subgraphs/reviews.js';
@@ -9,7 +10,7 @@ export interface SupergraphSetup {
   gateway: InstanceType<typeof ApolloGateway>;
   supergraphSdl: string;
   subgraphNames: string[];
-  productsSchema: any;
+  productsSchema: GraphQLSchema;
 }
 
 export function createSupergraphGateway(db: DatabaseSync): SupergraphSetup {
@@ -38,7 +39,7 @@ export function createSupergraphGateway(db: DatabaseSync): SupergraphSetup {
     throw new Error(`Apollo Federation Supergraph composition failed:\n${messages}`);
   }
 
-  const schemas: Record<string, unknown> = {
+  const schemas: Record<string, GraphQLSchema> = {
     products: productsSchema,
     reviews: reviewsSchema,
     inventory: inventorySchema
@@ -51,7 +52,7 @@ export function createSupergraphGateway(db: DatabaseSync): SupergraphSetup {
       if (!schema) {
         throw new Error(`No local schema found for subgraph: ${name}`);
       }
-      return new LocalGraphQLDataSource(schema as any);
+      return new LocalGraphQLDataSource(schema);
     }
   });
 

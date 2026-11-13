@@ -52,7 +52,6 @@ export async function runDataIngestion(db: DatabaseSync, forceRefresh = false): 
       insertCat.run(`cat-${catIdx++}`, catName, slug);
     }
 
-    // Вставка продуктов
     const insertProd = db.prepare(`
       INSERT OR REPLACE INTO products (id, title, description, price, category, brand, rating, source, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -61,7 +60,6 @@ export async function runDataIngestion(db: DatabaseSync, forceRefresh = false): 
       insertProd.run(p.id, p.title, p.description, p.price, p.category, p.brand, p.rating, p.source, p.created_at);
     }
 
-    // Вставка отзывов
     const insertRev = db.prepare(`
       INSERT OR REPLACE INTO reviews (id, product_id, author, rating, comment, created_at)
       VALUES (?, ?, ?, ?, ?, ?)
@@ -70,7 +68,6 @@ export async function runDataIngestion(db: DatabaseSync, forceRefresh = false): 
       insertRev.run(r.id, r.product_id, r.author, r.rating, r.comment, r.created_at);
     }
 
-    // Вставка истории цен (10 000+ записей)
     const insertPh = db.prepare(`
       INSERT OR REPLACE INTO price_history (id, product_id, price, recorded_at)
       VALUES (?, ?, ?, ?)
@@ -79,7 +76,6 @@ export async function runDataIngestion(db: DatabaseSync, forceRefresh = false): 
       insertPh.run(ph.id, ph.product_id, ph.price, ph.recorded_at);
     }
 
-    // Вставка остатков по складам
     const insertStock = db.prepare(`
       INSERT OR REPLACE INTO stocks (id, product_id, warehouse_id, quantity, updated_at)
       VALUES (?, ?, ?, ?, ?)

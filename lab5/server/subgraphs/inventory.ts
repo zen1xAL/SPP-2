@@ -121,7 +121,6 @@ export function createInventorySubgraph(db: DatabaseSync) {
               `).run(stockId, productId, warehouseId, safeQty, now);
             }
 
-            // Публикуем событие
             pubsub.publishStock({
               productId,
               warehouseName: warehouse.name,
