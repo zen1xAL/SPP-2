@@ -115,3 +115,4 @@ export interface StockUpdateEvent {
   quantity: number;
   updatedAt: string;
 }
+

@@ -43,3 +43,4 @@ describe('Performance Optimization: DataLoader N+1 Prevention', () => {
     expect(metrics.priceHistoryBatchCount).toBe(1);
   });
 });
+

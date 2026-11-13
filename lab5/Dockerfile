@@ -24,3 +24,4 @@ RUN mkdir -p /app/data
 EXPOSE 4000
 
 CMD ["node", "dist/server/server.js"]
+

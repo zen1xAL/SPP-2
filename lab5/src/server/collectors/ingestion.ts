@@ -104,3 +104,4 @@ export async function runDataIngestion(db: DatabaseSync, forceRefresh = false): 
 
   return getDatabaseStats(db);
 }
+

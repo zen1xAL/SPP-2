@@ -4,3 +4,4 @@ export function gql(strings: TemplateStringsArray, ...values: unknown[]): Docume
   const source = strings.reduce((acc, str, i) => acc + str + (values[i] !== undefined ? String(values[i]) : ''), '');
   return parse(source);
 }
+

@@ -127,3 +127,4 @@ describe('Apollo Federation v2 Supergraph Composition & Cross-Subgraph Query', (
     }
   });
 });
+

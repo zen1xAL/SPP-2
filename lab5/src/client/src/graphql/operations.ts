@@ -230,3 +230,4 @@ export const STOCK_SUBSCRIPTION = gql`
     }
   }
 `;
+

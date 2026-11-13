@@ -17,11 +17,11 @@ export interface ComplexityConfig {
 }
 
 export const DEFAULT_COMPLEXITY_CONFIG: ComplexityConfig = {
-  maxComplexity: 500,
+  maxComplexity: 1000,
   maxDepth: 6,
   scalarCost: 1,
   objectCost: 2,
-  defaultListMultiplier: 10
+  defaultListMultiplier: 3
 };
 
 export interface ComplexityResult {
@@ -82,7 +82,15 @@ function analyzeSelectionSet(
       }
 
       if (field.selectionSet) {
-        const childMultiplier = multiplier > 1 ? multiplier : (fieldName.endsWith('s') || fieldName === 'edges' ? (config.defaultListMultiplier ?? 10) : 1);
+        let childMultiplier = 1;
+        if (multiplier > 1) {
+          childMultiplier = multiplier;
+        } else if (fieldName === 'edges' || fieldName === 'node') {
+          childMultiplier = 1; // Обёртка Relay Connection наследует множитель родителя
+        } else if (fieldName === 'reviews' || fieldName === 'inventory' || fieldName === 'priceHistory' || fieldName.endsWith('s')) {
+          childMultiplier = config.defaultListMultiplier ?? 3;
+        }
+
         const child = analyzeSelectionSet(field.selectionSet, currentDepth + 1, currentMultiplier * childMultiplier, config);
         complexity += (config.objectCost ?? 2) * currentMultiplier + child.complexity;
         if (child.depth > maxChildDepth) {

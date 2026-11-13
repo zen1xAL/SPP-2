@@ -59,3 +59,4 @@ export async function fetchApiProducts(): Promise<ProductRecord[]> {
   }
   return fallbackList;
 }
+

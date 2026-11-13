@@ -152,7 +152,7 @@ docker compose up --build
 
 Приложение доступно по адресу: `http://localhost:5173` (клиент) и `http://localhost:4000/graphql` (GraphQL API).
 
-### Тестирование и верификация (навык `graphql-testing`):
+### Тестирование и верификация:
 
 ```bash
 cd lab5

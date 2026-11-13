@@ -33,17 +33,31 @@ export async function createApp(customDb?: DatabaseSync) {
 
   // Создаем шлюз Apollo Federation v2
   const { gateway } = createSupergraphGateway(db);
-  const { schema } = await gateway.load();
 
-  // Настройка WebSocket сервера для GraphQL Subscriptions (RFC-совместимый graphql-ws)
+  // Настройка Apollo Server 4 с шлюзом Apollo Gateway
+  const server = new ApolloServer({
+    gateway,
+    plugins: [
+      ApolloServerPluginDrainHttpServer({ httpServer }),
+      createComplexityPlugin({
+        maxComplexity: 1000,
+        maxDepth: 6
+      }),
+      createTracingPlugin()
+    ]
+  });
+
+  await server.start();
+
+  // Настройка WebSocket сервера для GraphQL Subscriptions после инициализации схемы шлюза
   const wsServer = new WebSocketServer({
     server: httpServer,
     path: '/graphql'
   });
 
-  const serverCleanup = useServer(
+  useServer(
     {
-      schema,
+      schema: gateway.schema!,
       context: async () => ({
         db,
         dataLoaders: createDataLoaders(db)
@@ -57,30 +71,6 @@ export async function createApp(customDb?: DatabaseSync) {
     },
     wsServer as any
   );
-
-  // Настройка Apollo Server 4 с плагинами контроля сложности и трассировки
-  const server = new ApolloServer({
-    gateway,
-    plugins: [
-      ApolloServerPluginDrainHttpServer({ httpServer }),
-      createComplexityPlugin({
-        maxComplexity: 500,
-        maxDepth: 6
-      }),
-      createTracingPlugin(),
-      {
-        async serverWillStart() {
-          return {
-            async serverWillStop() {
-              await serverCleanup.dispose();
-            }
-          };
-        }
-      }
-    ]
-  });
-
-  await server.start();
 
   // Подключение единого GraphQL-эндпоинта (взаимодействие только через GraphQL!)
   app.use(

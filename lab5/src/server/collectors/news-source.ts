@@ -69,3 +69,4 @@ export async function fetchNewsFeedReviews(productIds: string[]): Promise<Review
 
   return reviews;
 }
+
