@@ -1,4 +1,5 @@
 import { EventEmitter } from 'node:events';
+import { PUBSUB_CONFIG, PUBSUB_TOPICS, type PubSubTopic } from './shared/constants.js';
 
 export interface TickerEvent {
   productId: string;
@@ -27,12 +28,12 @@ export interface StockUpdateEvent {
   updatedAt: string;
 }
 
-function createEventIterator<T>(emitter: EventEmitter, eventName: string): AsyncIterableIterator<T> {
+function createEventIterator<T>(emitter: EventEmitter, eventName: PubSubTopic): AsyncIterableIterator<T> {
   const queue: T[] = [];
   let resolveNext: (() => void) | null = null;
   let done = false;
 
-  const listener = (event: T) => {
+  const listener = (event: T): void => {
     queue.push(event);
     if (resolveNext) {
       resolveNext();
@@ -47,16 +48,25 @@ function createEventIterator<T>(emitter: EventEmitter, eventName: string): Async
       return this;
     },
     async next(): Promise<IteratorResult<T>> {
-      if (queue.length > 0) {
-        return { value: queue.shift()!, done: false };
+      const item = queue.shift();
+      if (item !== undefined) {
+        return { value: item, done: false };
       }
+
       if (done) {
-        return { value: undefined as unknown as T, done: true };
+        return { value: undefined, done: true };
       }
+
       await new Promise<void>((resolve) => {
         resolveNext = resolve;
       });
-      return { value: queue.shift()!, done: false };
+
+      const delayedItem = queue.shift();
+      if (delayedItem !== undefined) {
+        return { value: delayedItem, done: false };
+      }
+
+      return { value: undefined, done: true };
     },
     async return(): Promise<IteratorResult<T>> {
       done = true;
@@ -65,40 +75,40 @@ function createEventIterator<T>(emitter: EventEmitter, eventName: string): Async
         resolveNext();
         resolveNext = null;
       }
-      return { value: undefined as unknown as T, done: true };
+      return { value: undefined, done: true };
     }
   };
 }
 
 class MarketplacePubSub {
-  private emitter = new EventEmitter();
+  private readonly emitter = new EventEmitter();
 
   constructor() {
-    this.emitter.setMaxListeners(100);
+    this.emitter.setMaxListeners(PUBSUB_CONFIG.MAX_LISTENERS);
   }
 
   publishTicker(event: TickerEvent): void {
-    this.emitter.emit('TICKER_UPDATED', event);
+    this.emitter.emit(PUBSUB_TOPICS.TICKER_UPDATED, event);
   }
 
   publishReview(event: NewReviewEvent): void {
-    this.emitter.emit('REVIEW_ADDED', event);
+    this.emitter.emit(PUBSUB_TOPICS.REVIEW_ADDED, event);
   }
 
   publishStock(event: StockUpdateEvent): void {
-    this.emitter.emit('STOCK_UPDATED', event);
+    this.emitter.emit(PUBSUB_TOPICS.STOCK_UPDATED, event);
   }
 
   subscribeTicker(): AsyncIterableIterator<TickerEvent> {
-    return createEventIterator<TickerEvent>(this.emitter, 'TICKER_UPDATED');
+    return createEventIterator<TickerEvent>(this.emitter, PUBSUB_TOPICS.TICKER_UPDATED);
   }
 
   subscribeReview(): AsyncIterableIterator<NewReviewEvent> {
-    return createEventIterator<NewReviewEvent>(this.emitter, 'REVIEW_ADDED');
+    return createEventIterator<NewReviewEvent>(this.emitter, PUBSUB_TOPICS.REVIEW_ADDED);
   }
 
   subscribeStock(): AsyncIterableIterator<StockUpdateEvent> {
-    return createEventIterator<StockUpdateEvent>(this.emitter, 'STOCK_UPDATED');
+    return createEventIterator<StockUpdateEvent>(this.emitter, PUBSUB_TOPICS.STOCK_UPDATED);
   }
 }
 

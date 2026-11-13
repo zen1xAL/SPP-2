@@ -178,7 +178,9 @@ describe('Search, Filtering, Sorting & Relay Cursor Pagination', () => {
       }
       const edges = (res.body.singleResult.data as unknown as SortResponse).products.edges;
       for (let i = 0; i < edges.length - 1; i++) {
-        expect(edges[i]!.node.price).toBeLessThanOrEqual(edges[i + 1]!.node.price);
+        const currentPrice = edges[i]?.node.price ?? 0;
+        const nextPrice = edges[i + 1]?.node.price ?? 0;
+        expect(currentPrice).toBeLessThanOrEqual(nextPrice);
       }
     }
   });

@@ -1,4 +1,5 @@
 import type { ApolloServerPlugin, GraphQLRequestContext, GraphQLFieldResolverParams } from '@apollo/server';
+import { TRACING_CONFIG } from './shared/constants.js';
 
 export interface ServerMetrics {
   totalRequests: number;
@@ -9,31 +10,6 @@ export interface ServerMetrics {
   memoryUsageMb: number;
 }
 
-const serverStartTime = Date.now();
-let totalRequestsCount = 0;
-let totalErrorsCount = 0;
-let totalDurationSum = 0;
-let activeSubscriptionsCount = 0;
-
-export function updateSubscriptionCount(delta: number): void {
-  activeSubscriptionsCount = Math.max(0, activeSubscriptionsCount + delta);
-}
-
-export function getServerMetrics(): ServerMetrics {
-  const uptimeSeconds = Math.round((Date.now() - serverStartTime) / 1000);
-  const avgDurationMs = totalRequestsCount > 0 ? Math.round((totalDurationSum / totalRequestsCount) * 100) / 100 : 0;
-  const memoryUsageMb = Math.round((process.memoryUsage().rss / 1024 / 1024) * 10) / 10;
-
-  return {
-    totalRequests: totalRequestsCount,
-    totalErrors: totalErrorsCount,
-    avgDurationMs,
-    uptimeSeconds,
-    activeSubscriptions: activeSubscriptionsCount,
-    memoryUsageMb
-  };
-}
-
 export interface ResolverSpan {
   path: string;
   parentType: string;
@@ -41,11 +17,71 @@ export interface ResolverSpan {
   durationMs: number;
 }
 
+class SystemMetricsRegistry {
+  private readonly serverStartTime = Date.now();
+  private totalRequests = 0;
+  private totalErrors = 0;
+  private totalDurationSum = 0;
+  private activeSubscriptions = 0;
+
+  recordRequestStart(): void {
+    this.totalRequests++;
+  }
+
+  recordRequestError(): void {
+    this.totalErrors++;
+  }
+
+  recordRequestCompletion(durationMs: number): void {
+    this.totalDurationSum += durationMs;
+  }
+
+  updateSubscriptions(delta: number): void {
+    this.activeSubscriptions = Math.max(0, this.activeSubscriptions + delta);
+  }
+
+  getSnapshot(): ServerMetrics {
+    const uptimeSeconds = Math.round((Date.now() - this.serverStartTime) / TRACING_CONFIG.MS_PER_SECOND);
+    const avgDurationMs =
+      this.totalRequests > 0
+        ? Math.round((this.totalDurationSum / this.totalRequests) * TRACING_CONFIG.DECIMAL_PRECISION) /
+          TRACING_CONFIG.DECIMAL_PRECISION
+        : 0;
+
+    const memoryUsageMb =
+      Math.round((process.memoryUsage().rss / TRACING_CONFIG.BYTES_PER_MB) * TRACING_CONFIG.MB_DECIMAL_PRECISION) /
+      TRACING_CONFIG.MB_DECIMAL_PRECISION;
+
+    return {
+      totalRequests: this.totalRequests,
+      totalErrors: this.totalErrors,
+      avgDurationMs,
+      uptimeSeconds,
+      activeSubscriptions: this.activeSubscriptions,
+      memoryUsageMb
+    };
+  }
+}
+
+const metricsRegistry = new SystemMetricsRegistry();
+
+export function updateSubscriptionCount(delta: number): void {
+  metricsRegistry.updateSubscriptions(delta);
+}
+
+export function getServerMetrics(): ServerMetrics {
+  return metricsRegistry.getSnapshot();
+}
+
+function roundToPrecision(value: number): number {
+  return Math.round(value * TRACING_CONFIG.DECIMAL_PRECISION) / TRACING_CONFIG.DECIMAL_PRECISION;
+}
+
 export function createTracingPlugin(): ApolloServerPlugin {
   return {
     async requestDidStart() {
       const requestStart = performance.now();
-      totalRequestsCount++;
+      metricsRegistry.recordRequestStart();
       const spans: ResolverSpan[] = [];
 
       return {
@@ -54,7 +90,7 @@ export function createTracingPlugin(): ApolloServerPlugin {
             willResolveField({ info }: GraphQLFieldResolverParams<unknown, unknown>) {
               const fieldStart = performance.now();
               return () => {
-                const durationMs = Math.round((performance.now() - fieldStart) * 100) / 100;
+                const durationMs = roundToPrecision(performance.now() - fieldStart);
                 if (!info.fieldName.startsWith('__')) {
                   spans.push({
                     path: info.path.key.toString(),
@@ -68,11 +104,11 @@ export function createTracingPlugin(): ApolloServerPlugin {
           };
         },
         async didEncounterErrors() {
-          totalErrorsCount++;
+          metricsRegistry.recordRequestError();
         },
         async willSendResponse(requestContext: GraphQLRequestContext<Record<string, unknown>>) {
-          const totalDurationMs = Math.round((performance.now() - requestStart) * 100) / 100;
-          totalDurationSum += totalDurationMs;
+          const totalDurationMs = roundToPrecision(performance.now() - requestStart);
+          metricsRegistry.recordRequestCompletion(totalDurationMs);
 
           const body = requestContext.response.body;
           if (body && body.kind === 'single') {
@@ -81,7 +117,7 @@ export function createTracingPlugin(): ApolloServerPlugin {
               tracing: {
                 durationMs: totalDurationMs,
                 resolverCount: spans.length,
-                spans: spans.slice(0, 15)
+                spans: spans.slice(0, TRACING_CONFIG.SPANS_MAX_RETAINED)
               }
             };
           }

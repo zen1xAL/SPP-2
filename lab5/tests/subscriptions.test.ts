@@ -83,8 +83,10 @@ describe('Mutations & GraphQL Subscriptions Real-time Events', () => {
 
     const event = await reviewIterator.next();
     expect(event.done).toBe(false);
-    expect((event.value as NewReviewEvent).author).toBe('Senior QA Tester');
-    expect((event.value as NewReviewEvent).rating).toBe(5);
+    if (!event.done && event.value) {
+      expect(event.value.author).toBe('Senior QA Tester');
+      expect(event.value.rating).toBe(5);
+    }
   });
 
   it('should execute updateStock mutation', async () => {

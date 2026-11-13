@@ -4,25 +4,25 @@ import { GET_PRODUCTS, GET_CATEGORIES } from '../graphql/operations.js';
 import type { ProductConnection, Category } from '../types.js';
 import { ChevronLeft, ChevronRight, Eye, Star } from 'lucide-react';
 import { ProductDetailModal } from './ProductDetailModal.js';
+import { CATALOG_CONFIG, CLIENT_THEME } from '../constants.js';
 
 export const Catalog: React.FC = () => {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>(CATALOG_CONFIG.CATEGORY_ALL);
   const [minPrice, setMinPrice] = useState<number | undefined>(undefined);
   const [maxPrice, setMaxPrice] = useState<number | undefined>(undefined);
-  const [sortBy, setSortBy] = useState('created_at');
-  const [sortOrder, setSortOrder] = useState('DESC');
+  const [sortBy, setSortBy] = useState<string>(CATALOG_CONFIG.DEFAULT_SORT_BY);
+  const [sortOrder, setSortOrder] = useState<string>(CATALOG_CONFIG.DEFAULT_SORT_ORDER);
 
-  const [pageSize] = useState(12);
   const [cursorStack, setCursorStack] = useState<(string | null)[]>([null]);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
-      setCursorStack([null]); 
-    }, 300);
+      setCursorStack([null]);
+    }, CATALOG_CONFIG.SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [search]);
 
@@ -32,10 +32,10 @@ export const Catalog: React.FC = () => {
 
   const { data, loading, error } = useQuery<{ products: ProductConnection }>(GET_PRODUCTS, {
     variables: {
-      first: pageSize,
+      first: CATALOG_CONFIG.DEFAULT_PAGE_SIZE,
       after: currentAfterCursor,
       search: debouncedSearch || undefined,
-      category: selectedCategory !== 'all' ? selectedCategory : undefined,
+      category: selectedCategory !== CATALOG_CONFIG.CATEGORY_ALL ? selectedCategory : undefined,
       minPrice: minPrice !== undefined ? Number(minPrice) : undefined,
       maxPrice: maxPrice !== undefined ? Number(maxPrice) : undefined,
       sortBy,
@@ -46,13 +46,13 @@ export const Catalog: React.FC = () => {
 
   const handleNextPage = () => {
     if (data?.products.pageInfo.hasNextPage && data.products.pageInfo.endCursor) {
-      setCursorStack([...cursorStack, data.products.pageInfo.endCursor]);
+      setCursorStack((prev) => [...prev, data.products.pageInfo.endCursor]);
     }
   };
 
   const handlePrevPage = () => {
     if (cursorStack.length > 1) {
-      setCursorStack(cursorStack.slice(0, cursorStack.length - 1));
+      setCursorStack((prev) => prev.slice(0, prev.length - 1));
     }
   };
 
@@ -83,7 +83,7 @@ export const Catalog: React.FC = () => {
               setCursorStack([null]);
             }}
           />
-          <span style={{ color: '#64748b' }}>–</span>
+          <span style={{ color: CLIENT_THEME.colors.textMuted }}>–</span>
           <input
             type="number"
             className="input-field font-mono"
@@ -102,9 +102,9 @@ export const Catalog: React.FC = () => {
             className="select-field"
             value={`${sortBy}_${sortOrder}`}
             onChange={(e) => {
-              const [sb, so] = e.target.value.split('_');
-              setSortBy(sb!);
-              setSortOrder(so!);
+              const parts = e.target.value.split('_');
+              setSortBy(parts[0] ?? CATALOG_CONFIG.DEFAULT_SORT_BY);
+              setSortOrder(parts[1] ?? CATALOG_CONFIG.DEFAULT_SORT_ORDER);
               setCursorStack([null]);
             }}
           >
@@ -117,12 +117,11 @@ export const Catalog: React.FC = () => {
         </div>
       </div>
 
-      {/* Быстрые фильтры по категориям */}
       <div style={{ marginBottom: '16px' }} className="category-pills">
         <button
-          className={`pill-filter ${selectedCategory === 'all' ? 'active' : ''}`}
+          className={`pill-filter ${selectedCategory === CATALOG_CONFIG.CATEGORY_ALL ? 'active' : ''}`}
           onClick={() => {
-            setSelectedCategory('all');
+            setSelectedCategory(CATALOG_CONFIG.CATEGORY_ALL);
             setCursorStack([null]);
           }}
         >
@@ -142,16 +141,15 @@ export const Catalog: React.FC = () => {
         ))}
       </div>
 
-      {/* Таблица товаров */}
       <div className="data-table-container">
         {loading && !data && (
-          <div style={{ padding: '30px', textAlign: 'center', color: '#94a3b8' }}>
+          <div style={{ padding: '30px', textAlign: 'center', color: CLIENT_THEME.colors.textSecondary }}>
             Выполнение GraphQL-запроса через Supergraph Gateway...
           </div>
         )}
 
         {error && (
-          <div style={{ padding: '20px', color: '#ef4444' }}>
+          <div style={{ padding: '20px', color: CLIENT_THEME.colors.danger }}>
             Ошибка выполнения GraphQL-запроса: {error.message}
           </div>
         )}
@@ -174,8 +172,8 @@ export const Catalog: React.FC = () => {
                 {data.products.edges.map(({ node }) => (
                   <tr key={node.id}>
                     <td>
-                      <div style={{ fontWeight: 600, color: '#f8fafc' }}>{node.title}</div>
-                      <div style={{ fontSize: '11px', color: '#64748b' }}>
+                      <div style={{ fontWeight: 600, color: CLIENT_THEME.colors.textLight }}>{node.title}</div>
+                      <div style={{ fontSize: '11px', color: CLIENT_THEME.colors.textMuted }}>
                         {node.brand} • <span className="font-mono">ID: {node.id}</span>
                       </div>
                     </td>
@@ -188,13 +186,13 @@ export const Catalog: React.FC = () => {
                       <span className={`badge-source ${node.source}`}>{node.source}</span>
                     </td>
                     <td>
-                      <span className="font-mono" style={{ fontWeight: 600, color: '#38bdf8' }}>
+                      <span className="font-mono" style={{ fontWeight: 600, color: CLIENT_THEME.colors.primary }}>
                         ${node.price.toFixed(2)}
                       </span>
                     </td>
                     <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#f59e0b' }}>
-                        <Star size={13} fill="#f59e0b" />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: CLIENT_THEME.colors.warning }}>
+                        <Star size={13} fill={CLIENT_THEME.colors.warning} />
                         <span className="font-mono">{node.rating.toFixed(1)}</span>
                       </div>
                     </td>
@@ -202,7 +200,7 @@ export const Catalog: React.FC = () => {
                       <span
                         style={{
                           fontSize: '12px',
-                          color: node.inStock ? '#10b981' : '#ef4444',
+                          color: node.inStock ? CLIENT_THEME.colors.success : CLIENT_THEME.colors.danger,
                           fontWeight: 500
                         }}
                       >
@@ -224,9 +222,8 @@ export const Catalog: React.FC = () => {
               </tbody>
             </table>
 
-            {/* Relay Cursor Connection Pagination Controls */}
             <div className="pagination-bar">
-              <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+              <div style={{ fontSize: '12px', color: CLIENT_THEME.colors.textSecondary }}>
                 Всего найдено:{' '}
                 <strong style={{ color: '#fff' }}>{data.products.totalCount.toLocaleString()}</strong> товаров
                 {' • '}
@@ -256,7 +253,6 @@ export const Catalog: React.FC = () => {
         )}
       </div>
 
-      {/* Модальное окно детализации */}
       {selectedProductId && (
         <ProductDetailModal
           productId={selectedProductId}

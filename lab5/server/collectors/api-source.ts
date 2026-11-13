@@ -1,4 +1,5 @@
 import type { ProductRecord } from '../db.js';
+import { API_COLLECTOR_CONFIG } from '../shared/constants.js';
 
 interface DummyProduct {
   id: number;
@@ -10,40 +11,21 @@ interface DummyProduct {
   rating: number;
 }
 
-export async function fetchApiProducts(): Promise<ProductRecord[]> {
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4000);
+interface DummyApiResponse {
+  products?: DummyProduct[];
+}
 
-    const res = await fetch('https://dummyjson.com/products?limit=50', {
-      signal: controller.signal
-    });
-    clearTimeout(timeoutId);
+const FALLBACK_CATEGORIES = ['smartphones', 'laptops', 'fragrances', 'skincare', 'groceries'] as const;
 
-    if (res.ok) {
-      const data = (await res.json()) as { products?: DummyProduct[] };
-      if (Array.isArray(data.products) && data.products.length > 0) {
-        return data.products.map((p) => ({
-          id: `api-prod-${p.id}`,
-          title: p.title,
-          description: p.description,
-          price: p.price,
-          category: p.category.toLowerCase(),
-          brand: p.brand || 'Global Brand',
-          rating: p.rating || 4.2,
-          source: 'api',
-          created_at: new Date(Date.now() - p.id * 86400000).toISOString()
-        }));
-      }
-    }
-  } catch {
-  }
+function generateFallbackProducts(): ProductRecord[] {
+  const list: ProductRecord[] = [];
+  const now = Date.now();
 
-  const fallbackCategories = ['smartphones', 'laptops', 'fragrances', 'skincare', 'groceries'];
-  const fallbackList: ProductRecord[] = [];
-  for (let i = 1; i <= 25; i++) {
-    const cat = fallbackCategories[i % fallbackCategories.length]!;
-    fallbackList.push({
+  for (let i = 1; i <= API_COLLECTOR_CONFIG.FALLBACK_COUNT; i++) {
+    const categoryIndex = i % FALLBACK_CATEGORIES.length;
+    const cat = FALLBACK_CATEGORIES[categoryIndex] ?? 'groceries';
+
+    list.push({
       id: `api-prod-${i}`,
       title: `Certified External Product ${i}`,
       description: `High quality standard item #${i} ingested from certified public external supplier catalog.`,
@@ -51,10 +33,43 @@ export async function fetchApiProducts(): Promise<ProductRecord[]> {
       category: cat,
       brand: `Brand-${String.fromCharCode(65 + (i % 8))}`,
       rating: Math.round((3.8 + (i % 12) * 0.1) * 10) / 10,
-      source: 'api',
-      created_at: new Date(Date.now() - i * 43200000).toISOString()
+      source: API_COLLECTOR_CONFIG.SOURCE_NAME,
+      created_at: new Date(now - i * 43_200_000).toISOString()
     });
   }
-  return fallbackList;
+
+  return list;
 }
 
+export async function fetchApiProducts(): Promise<ProductRecord[]> {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), API_COLLECTOR_CONFIG.REQUEST_TIMEOUT_MS);
+
+    const res = await fetch(API_COLLECTOR_CONFIG.ENDPOINT_URL, {
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+
+    if (res.ok) {
+      const data = (await res.json()) as DummyApiResponse;
+      if (Array.isArray(data.products) && data.products.length > 0) {
+        return data.products.map((p) => ({
+          id: `api-prod-${p.id}`,
+          title: p.title,
+          description: p.description,
+          price: p.price,
+          category: p.category.toLowerCase(),
+          brand: p.brand || API_COLLECTOR_CONFIG.DEFAULT_BRAND,
+          rating: p.rating || API_COLLECTOR_CONFIG.DEFAULT_RATING,
+          source: API_COLLECTOR_CONFIG.SOURCE_NAME,
+          created_at: new Date(Date.now() - p.id * 86_400_000).toISOString()
+        }));
+      }
+    }
+  } catch (err: unknown) {
+    console.warn('[Collector: API] External fetch failed or timed out, applying resilient fallback pool:', err instanceof Error ? err.message : String(err));
+  }
+
+  return generateFallbackProducts();
+}

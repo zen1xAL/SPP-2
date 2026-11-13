@@ -1,9 +1,9 @@
 import { buildSubgraphSchema } from '@apollo/subgraph';
 import { gql } from '../shared/gql.js';
 import type { DatabaseSync } from 'node:sqlite';
-import { v4 as uuidv4 } from 'uuid';
 import type { StockRecord, ProductRecord, WarehouseRecord } from '../db.js';
 import { pubsub } from '../pubsub.js';
+import { INVENTORY_CONFIG } from '../shared/constants.js';
 import type { GraphQLContext } from './products.js';
 
 export const inventoryTypeDefs = gql`
@@ -41,57 +41,52 @@ export const inventoryTypeDefs = gql`
   }
 `;
 
+interface UpdateStockArgs {
+  productId: string;
+  warehouseId: string;
+  quantity: number;
+}
+
 export function createInventorySubgraph(db: DatabaseSync) {
   return buildSubgraphSchema([
     {
       typeDefs: inventoryTypeDefs,
       resolvers: {
         WarehouseStock: {
-          productId(stock: StockRecord) {
+          productId(stock: StockRecord): string {
             return stock.product_id;
           },
-          warehouseId(stock: StockRecord) {
+          warehouseId(stock: StockRecord): string {
             return stock.warehouse_id;
           },
-          warehouseName(stock: StockRecord) {
-            return stock.warehouse_name || 'Main Warehouse';
+          warehouseName(stock: StockRecord): string {
+            return stock.warehouse_name || INVENTORY_CONFIG.DEFAULT_WAREHOUSE_NAME;
           },
-          updatedAt(stock: StockRecord) {
+          updatedAt(stock: StockRecord): string {
             return stock.updated_at;
           }
         },
         Product: {
-          async inventory(product: ProductRecord, _: unknown, context: GraphQLContext) {
+          async inventory(product: ProductRecord, _: unknown, context: GraphQLContext): Promise<StockRecord[]> {
             return await context.dataLoaders.stocksByProductId.load(product.id);
           },
-          async totalStock(product: ProductRecord, _: unknown, context: GraphQLContext) {
+          async totalStock(product: ProductRecord, _: unknown, context: GraphQLContext): Promise<number> {
             const list = await context.dataLoaders.stocksByProductId.load(product.id);
             return list.reduce((sum, s) => sum + s.quantity, 0);
           },
-          async inStock(product: ProductRecord, _: unknown, context: GraphQLContext) {
+          async inStock(product: ProductRecord, _: unknown, context: GraphQLContext): Promise<boolean> {
             const list = await context.dataLoaders.stocksByProductId.load(product.id);
-            const total = list.reduce((sum, s) => sum + s.quantity, 0);
-            return total > 0;
+            return list.some((s) => s.quantity > 0);
           }
         },
         Query: {
-          warehouses() {
-            return db.prepare('SELECT * FROM warehouses ORDER BY name ASC').all();
+          warehouses(): WarehouseRecord[] {
+            const rows = db.prepare('SELECT * FROM warehouses ORDER BY name ASC').all();
+            return rows as unknown as WarehouseRecord[];
           }
         },
         Mutation: {
-          updateStock(
-            _: unknown,
-            {
-              productId,
-              warehouseId,
-              quantity
-            }: {
-              productId: string;
-              warehouseId: string;
-              quantity: number;
-            }
-          ) {
+          updateStock(_: unknown, { productId, warehouseId, quantity }: UpdateStockArgs): StockRecord {
             const product = db.prepare('SELECT * FROM products WHERE id = ?').get(productId) as ProductRecord | undefined;
             if (!product) {
               throw new Error(`Product with ID "${productId}" not found.`);
@@ -105,11 +100,11 @@ export function createInventorySubgraph(db: DatabaseSync) {
             const safeQty = Math.max(0, Math.round(quantity));
             const now = new Date().toISOString();
 
-            const existing = db.prepare(`
-              SELECT * FROM stocks WHERE product_id = ? AND warehouse_id = ?
-            `).get(productId, warehouseId) as StockRecord | undefined;
+            const existing = db.prepare(
+              'SELECT * FROM stocks WHERE product_id = ? AND warehouse_id = ?'
+            ).get(productId, warehouseId) as StockRecord | undefined;
 
-            let stockId = existing ? existing.id : `stock-${productId}-${warehouseId}`;
+            const stockId = existing ? existing.id : `stock-${productId}-${warehouseId}`;
 
             if (existing) {
               db.prepare('UPDATE stocks SET quantity = ?, updated_at = ? WHERE id = ?')

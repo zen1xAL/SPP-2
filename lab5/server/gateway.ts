@@ -6,10 +6,12 @@ import { createProductsSubgraph, productsTypeDefs } from './subgraphs/products.j
 import { createReviewsSubgraph, reviewsTypeDefs } from './subgraphs/reviews.js';
 import { createInventorySubgraph, inventoryTypeDefs } from './subgraphs/inventory.js';
 
+type SubgraphInputList = Parameters<typeof composeServices>[0];
+
 export interface SupergraphSetup {
   gateway: InstanceType<typeof ApolloGateway>;
   supergraphSdl: string;
-  subgraphNames: string[];
+  subgraphNames: readonly string[];
   productsSchema: GraphQLSchema;
 }
 
@@ -18,19 +20,10 @@ export function createSupergraphGateway(db: DatabaseSync): SupergraphSetup {
   const reviewsSchema = createReviewsSubgraph(db);
   const inventorySchema = createInventorySubgraph(db);
 
-  const subgraphs = [
-    {
-      name: 'products',
-      typeDefs: productsTypeDefs
-    },
-    {
-      name: 'reviews',
-      typeDefs: reviewsTypeDefs
-    },
-    {
-      name: 'inventory',
-      typeDefs: inventoryTypeDefs
-    }
+  const subgraphs: SubgraphInputList = [
+    { name: 'products', typeDefs: productsTypeDefs },
+    { name: 'reviews', typeDefs: reviewsTypeDefs },
+    { name: 'inventory', typeDefs: inventoryTypeDefs }
   ];
 
   const compositionResult = composeServices(subgraphs);
@@ -59,7 +52,7 @@ export function createSupergraphGateway(db: DatabaseSync): SupergraphSetup {
   return {
     gateway,
     supergraphSdl: compositionResult.supergraphSdl || '',
-    subgraphNames: ['products', 'reviews', 'inventory'],
+    subgraphNames: ['products', 'reviews', 'inventory'] as const,
     productsSchema
   };
 }

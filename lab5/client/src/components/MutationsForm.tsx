@@ -3,30 +3,42 @@ import { useMutation, useQuery } from '@apollo/client';
 import { CREATE_PRODUCT, ADD_REVIEW, UPDATE_STOCK, GET_CATEGORIES, GET_PRODUCTS } from '../graphql/operations.js';
 import type { Category, Warehouse } from '../types.js';
 import { PlusCircle, MessageSquarePlus, PackagePlus, CheckCircle2 } from 'lucide-react';
+import { MUTATION_FORM_DEFAULTS, CLIENT_THEME, formatClientError, CATALOG_CONFIG } from '../constants.js';
+
+function useTemporaryFeedback(durationMs: number = MUTATION_FORM_DEFAULTS.SUCCESS_DURATION_MS) {
+  const [active, setActive] = useState(false);
+
+  const trigger = () => {
+    setActive(true);
+    setTimeout(() => setActive(false), durationMs);
+  };
+
+  return [active, trigger] as const;
+}
 
 export const MutationsForm: React.FC = () => {
   const { data: catData } = useQuery<{ categories: Category[]; warehouses: Warehouse[] }>(GET_CATEGORIES);
 
   const [prodTitle, setProdTitle] = useState('');
   const [prodDesc, setProdDesc] = useState('');
-  const [prodPrice, setProdPrice] = useState(149.99);
-  const [prodCategory, setProdCategory] = useState('electronics');
-  const [prodBrand, setProdBrand] = useState('NexusCore');
-  const [prodSuccess, setProdSuccess] = useState(false);
+  const [prodPrice, setProdPrice] = useState<number>(MUTATION_FORM_DEFAULTS.PRODUCT_PRICE);
+  const [prodCategory, setProdCategory] = useState<string>(MUTATION_FORM_DEFAULTS.PRODUCT_CATEGORY);
+  const [prodBrand, setProdBrand] = useState<string>(MUTATION_FORM_DEFAULTS.PRODUCT_BRAND);
+  const [prodSuccess, triggerProdSuccess] = useTemporaryFeedback();
 
-  const [revProductId, setRevProductId] = useState('api-prod-1');
+  const [revProductId, setRevProductId] = useState<string>(MUTATION_FORM_DEFAULTS.TARGET_PRODUCT_ID);
   const [revAuthor, setRevAuthor] = useState('');
-  const [revRating, setRevRating] = useState(5);
+  const [revRating, setRevRating] = useState<number>(MUTATION_FORM_DEFAULTS.DEFAULT_RATING);
   const [revComment, setRevComment] = useState('');
-  const [revSuccess, setRevSuccess] = useState(false);
+  const [revSuccess, triggerRevSuccess] = useTemporaryFeedback();
 
-  const [stockProductId, setStockProductId] = useState('api-prod-1');
-  const [stockWarehouseId, setStockWarehouseId] = useState('wh-1');
-  const [stockQty, setStockQty] = useState(50);
-  const [stockSuccess, setStockSuccess] = useState(false);
+  const [stockProductId, setStockProductId] = useState<string>(MUTATION_FORM_DEFAULTS.TARGET_PRODUCT_ID);
+  const [stockWarehouseId, setStockWarehouseId] = useState<string>(MUTATION_FORM_DEFAULTS.DEFAULT_WAREHOUSE_ID);
+  const [stockQty, setStockQty] = useState<number>(MUTATION_FORM_DEFAULTS.DEFAULT_STOCK_QTY);
+  const [stockSuccess, triggerStockSuccess] = useTemporaryFeedback();
 
   const [createProduct, { loading: prodLoading }] = useMutation(CREATE_PRODUCT, {
-    refetchQueries: [{ query: GET_PRODUCTS, variables: { first: 12 } }]
+    refetchQueries: [{ query: GET_PRODUCTS, variables: { first: CATALOG_CONFIG.DEFAULT_PAGE_SIZE } }]
   });
 
   const [addReview, { loading: revLoading }] = useMutation(ADD_REVIEW);
@@ -48,10 +60,9 @@ export const MutationsForm: React.FC = () => {
       });
       setProdTitle('');
       setProdDesc('');
-      setProdSuccess(true);
-      setTimeout(() => setProdSuccess(false), 3000);
-    } catch (err) {
-      alert((err as Error).message);
+      triggerProdSuccess();
+    } catch (err: unknown) {
+      alert(formatClientError(err));
     }
   };
 
@@ -69,10 +80,9 @@ export const MutationsForm: React.FC = () => {
         }
       });
       setRevComment('');
-      setRevSuccess(true);
-      setTimeout(() => setRevSuccess(false), 3000);
-    } catch (err) {
-      alert((err as Error).message);
+      triggerRevSuccess();
+    } catch (err: unknown) {
+      alert(formatClientError(err));
     }
   };
 
@@ -86,10 +96,9 @@ export const MutationsForm: React.FC = () => {
           quantity: Number(stockQty)
         }
       });
-      setStockSuccess(true);
-      setTimeout(() => setStockSuccess(false), 3000);
-    } catch (err) {
-      alert((err as Error).message);
+      triggerStockSuccess();
+    } catch (err: unknown) {
+      alert(formatClientError(err));
     }
   };
 
@@ -97,7 +106,7 @@ export const MutationsForm: React.FC = () => {
     <div className="container">
       <div style={{ marginBottom: '20px' }}>
         <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>GraphQL Mutations (Изменение данных)</h2>
-        <p style={{ fontSize: '13px', color: '#94a3b8' }}>
+        <p style={{ fontSize: '13px', color: CLIENT_THEME.colors.textSecondary }}>
           Отправка мутаций в распределенную схему Apollo Federation с мгновенной публикацией событий в WebSocket Subscriptions.
         </p>
       </div>
@@ -105,7 +114,7 @@ export const MutationsForm: React.FC = () => {
       <div className="grid-3">
         <div className="card">
           <div className="card-title">
-            <PlusCircle size={16} color="#38bdf8" />
+            <PlusCircle size={16} color={CLIENT_THEME.colors.primary} />
             <span>createProduct</span>
           </div>
 
@@ -175,7 +184,7 @@ export const MutationsForm: React.FC = () => {
             </button>
 
             {prodSuccess && (
-              <div style={{ marginTop: '10px', color: '#10b981', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <div style={{ marginTop: '10px', color: CLIENT_THEME.colors.success, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <CheckCircle2 size={14} /> Товар успешно создан в базе!
               </div>
             )}
@@ -184,7 +193,7 @@ export const MutationsForm: React.FC = () => {
 
         <div className="card">
           <div className="card-title">
-            <MessageSquarePlus size={16} color="#f59e0b" />
+            <MessageSquarePlus size={16} color={CLIENT_THEME.colors.warning} />
             <span>addReview (Reviews Subgraph)</span>
           </div>
 
@@ -246,7 +255,7 @@ export const MutationsForm: React.FC = () => {
             </button>
 
             {revSuccess && (
-              <div style={{ marginTop: '10px', color: '#10b981', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <div style={{ marginTop: '10px', color: CLIENT_THEME.colors.success, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <CheckCircle2 size={14} /> Отзыв сохранен и разослан подписчикам!
               </div>
             )}
@@ -255,7 +264,7 @@ export const MutationsForm: React.FC = () => {
 
         <div className="card">
           <div className="card-title">
-            <PackagePlus size={16} color="#10b981" />
+            <PackagePlus size={16} color={CLIENT_THEME.colors.success} />
             <span>updateStock (Inventory Subgraph)</span>
           </div>
 
@@ -282,13 +291,7 @@ export const MutationsForm: React.FC = () => {
               >
                 {catData?.warehouses?.map((w) => (
                   <option key={w.id} value={w.id}>{w.name} ({w.city})</option>
-                )) || (
-                  <>
-                    <option value="wh-1">Central Distribution Center (Minsk)</option>
-                    <option value="wh-2">Logistics Depot North (Vilnius)</option>
-                    <option value="wh-3">Rapid Transit Terminal (Warsaw)</option>
-                  </>
-                )}
+                ))}
               </select>
             </div>
 
@@ -309,7 +312,7 @@ export const MutationsForm: React.FC = () => {
             </button>
 
             {stockSuccess && (
-              <div style={{ marginTop: '10px', color: '#10b981', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <div style={{ marginTop: '10px', color: CLIENT_THEME.colors.success, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <CheckCircle2 size={14} /> Складской остаток успешно обновлен!
               </div>
             )}
@@ -319,4 +322,3 @@ export const MutationsForm: React.FC = () => {
     </div>
   );
 };
-

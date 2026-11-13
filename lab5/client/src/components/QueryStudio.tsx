@@ -1,7 +1,37 @@
 import React, { useState } from 'react';
-import { useApolloClient } from '@apollo/client';
-import { gql } from '@apollo/client';
+import { useApolloClient, gql } from '@apollo/client';
 import { Play, ShieldAlert, Cpu } from 'lucide-react';
+import { CLIENT_THEME, formatClientError } from '../constants.js';
+
+interface QueryEstimate {
+  depth: number;
+  cost: number;
+}
+
+function estimateQueryBudget(
+  limit: number,
+  includeReviews: boolean,
+  includeInventory: boolean,
+  includePriceHistory: boolean
+): QueryEstimate {
+  let depth = 4;
+  let cost = 2 + limit * 5;
+
+  if (includeReviews) {
+    depth = Math.max(depth, 5);
+    cost += limit * 8;
+  }
+  if (includeInventory) {
+    depth = Math.max(depth, 5);
+    cost += limit * 6;
+  }
+  if (includePriceHistory) {
+    depth = Math.max(depth, 5);
+    cost += limit * 15;
+  }
+
+  return { depth, cost };
+}
 
 export const QueryStudio: React.FC = () => {
   const client = useApolloClient();
@@ -56,20 +86,12 @@ export const QueryStudio: React.FC = () => {
   }
 }`;
 
-  let estimatedDepth = 4;
-  let estimatedCost = 2 + limit * 5;
-  if (includeReviews) {
-    estimatedDepth = Math.max(estimatedDepth, 5);
-    estimatedCost += limit * 8;
-  }
-  if (includeInventory) {
-    estimatedDepth = Math.max(estimatedDepth, 5);
-    estimatedCost += limit * 6;
-  }
-  if (includePriceHistory) {
-    estimatedDepth = Math.max(estimatedDepth, 5);
-    estimatedCost += limit * 15;
-  }
+  const { depth: estimatedDepth, cost: estimatedCost } = estimateQueryBudget(
+    limit,
+    includeReviews,
+    includeInventory,
+    includePriceHistory
+  );
 
   const isOverBudget = estimatedCost > 500 || estimatedDepth > 6;
 
@@ -89,8 +111,7 @@ export const QueryStudio: React.FC = () => {
     } catch (err: unknown) {
       const duration = Math.round(performance.now() - startTime);
       setExecutionTime(duration);
-      const errorMessage = err instanceof Error ? err.message : String(err);
-      setQueryResult(JSON.stringify({ error: errorMessage }, null, 2));
+      setQueryResult(JSON.stringify({ error: formatClientError(err) }, null, 2));
     } finally {
       setExecuting(false);
     }
@@ -100,20 +121,19 @@ export const QueryStudio: React.FC = () => {
     <div className="container">
       <div style={{ marginBottom: '20px' }}>
         <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>Dynamic Query Studio & Complexity Meter</h2>
-        <p style={{ fontSize: '13px', color: '#94a3b8' }}>
+        <p style={{ fontSize: '13px', color: CLIENT_THEME.colors.textSecondary }}>
           Динамическое конструирование произвольных GraphQL-запросов с расчетом веса сложности (Query Complexity Limiter) и трассировкой времени резолверов.
         </p>
       </div>
 
-      {/* Панель настройки динамических полей */}
       <div className="card" style={{ marginBottom: '20px' }}>
-        <div style={{ fontSize: '13px', fontWeight: 600, color: '#f8fafc', marginBottom: '12px' }}>
+        <div style={{ fontSize: '13px', fontWeight: 600, color: CLIENT_THEME.colors.textLight, marginBottom: '12px' }}>
           Конфигуратор запрашиваемых полей и уровней вложенности:
         </div>
 
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'center' }}>
           <div>
-            <label style={{ fontSize: '12px', color: '#94a3b8', marginRight: '8px' }}>Лимит записей (first):</label>
+            <label style={{ fontSize: '12px', color: CLIENT_THEME.colors.textSecondary, marginRight: '8px' }}>Лимит записей (first):</label>
             <input
               type="number"
               min={1}
@@ -121,7 +141,7 @@ export const QueryStudio: React.FC = () => {
               className="input-field font-mono"
               style={{ width: '70px', display: 'inline-block' }}
               value={limit}
-              onChange={(e) => setLimit(Math.max(1, parseInt(e.target.value) || 1))}
+              onChange={(e) => setLimit(Math.max(1, parseInt(e.target.value, 10) || 1))}
             />
           </div>
 
@@ -143,7 +163,7 @@ export const QueryStudio: React.FC = () => {
             <span>description</span>
           </label>
 
-          <label style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', color: '#f59e0b' }}>
+          <label style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', color: CLIENT_THEME.colors.warning }}>
             <input
               type="checkbox"
               checked={includeReviews}
@@ -152,7 +172,7 @@ export const QueryStudio: React.FC = () => {
             <span>+ reviews (Subgraph Reviews)</span>
           </label>
 
-          <label style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', color: '#10b981' }}>
+          <label style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', color: CLIENT_THEME.colors.success }}>
             <input
               type="checkbox"
               checked={includeInventory}
@@ -161,7 +181,7 @@ export const QueryStudio: React.FC = () => {
             <span>+ inventory (Subgraph Inventory)</span>
           </label>
 
-          <label style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', color: '#38bdf8' }}>
+          <label style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', color: CLIENT_THEME.colors.primary }}>
             <input
               type="checkbox"
               checked={includePriceHistory}
@@ -173,10 +193,9 @@ export const QueryStudio: React.FC = () => {
       </div>
 
       <div className="query-studio-container">
-        {/* Левая колонка: Сгенерированный код GraphQL */}
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '12px', fontWeight: 600, color: '#94a3b8' }}>СГЕНЕРИРОВАННЫЙ GRAPHQL ЗАПРОС</span>
+            <span style={{ fontSize: '12px', fontWeight: 600, color: CLIENT_THEME.colors.textSecondary }}>СГЕНЕРИРОВАННЫЙ GRAPHQL ЗАПРОС</span>
             <button className="btn btn-primary" onClick={handleExecute} disabled={executing}>
               <Play size={14} /> {executing ? 'Запрос...' : 'Выполнить GraphQL'}
             </button>
@@ -185,29 +204,28 @@ export const QueryStudio: React.FC = () => {
           <div className="code-editor">{dynamicQueryString}</div>
 
           <div className="complexity-meter">
-            <Cpu size={16} color="#38bdf8" />
+            <Cpu size={16} color={CLIENT_THEME.colors.primary} />
             <div>
               <span>Глубина AST: </span>
-              <strong style={{ color: estimatedDepth > 6 ? '#ef4444' : '#38bdf8' }}>{estimatedDepth} / 6</strong>
+              <strong style={{ color: estimatedDepth > 6 ? CLIENT_THEME.colors.danger : CLIENT_THEME.colors.primary }}>{estimatedDepth} / 6</strong>
               {' • '}
               <span>Сложность: </span>
-              <strong style={{ color: isOverBudget ? '#ef4444' : '#10b981' }}>{estimatedCost} / 500</strong>
+              <strong style={{ color: isOverBudget ? CLIENT_THEME.colors.danger : CLIENT_THEME.colors.success }}>{estimatedCost} / 500</strong>
             </div>
 
             {isOverBudget && (
-              <div style={{ color: '#ef4444', display: 'flex', alignItems: 'center', gap: '4px', marginLeft: 'auto' }}>
+              <div style={{ color: CLIENT_THEME.colors.danger, display: 'flex', alignItems: 'center', gap: '4px', marginLeft: 'auto' }}>
                 <ShieldAlert size={14} /> Превышен лимит!
               </div>
             )}
           </div>
         </div>
 
-        {/* Правая колонка: Результат ответа */}
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '12px', fontWeight: 600, color: '#94a3b8' }}>ОТВЕТ СЕРВЕРА (JSON & TRACING)</span>
+            <span style={{ fontSize: '12px', fontWeight: 600, color: CLIENT_THEME.colors.textSecondary }}>ОТВЕТ СЕРВЕРА (JSON & TRACING)</span>
             {executionTime !== null && (
-              <span className="font-mono" style={{ fontSize: '12px', color: '#10b981' }}>
+              <span className="font-mono" style={{ fontSize: '12px', color: CLIENT_THEME.colors.success }}>
                 RTT: {executionTime} мс
               </span>
             )}

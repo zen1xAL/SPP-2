@@ -111,9 +111,10 @@ describe('Load Control & Security: Query Complexity & Depth Limiting', () => {
 
     if (res.body.kind === 'single') {
       expect(res.body.singleResult.errors).toBeDefined();
-      const err = res.body.singleResult.errors![0]!;
-      expect(err.extensions?.code).toBe('GRAPHQL_VALIDATION_FAILED');
-      expect(err.message).toContain('Depth of');
+      const firstError = res.body.singleResult.errors?.[0];
+      expect(firstError).toBeDefined();
+      expect(firstError?.extensions?.code).toBe('GRAPHQL_VALIDATION_FAILED');
+      expect(firstError?.message).toContain('Depth of');
     }
   });
 
@@ -149,9 +150,10 @@ describe('Load Control & Security: Query Complexity & Depth Limiting', () => {
 
     if (res.body.kind === 'single') {
       expect(res.body.singleResult.errors).toBeDefined();
-      const err = res.body.singleResult.errors![0]!;
-      expect(err.extensions?.code).toBe('GRAPHQL_VALIDATION_FAILED');
-      expect(err.message).toContain('Complexity score');
+      const firstError = res.body.singleResult.errors?.[0];
+      expect(firstError).toBeDefined();
+      expect(firstError?.extensions?.code).toBe('GRAPHQL_VALIDATION_FAILED');
+      expect(firstError?.message).toContain('Complexity score');
     }
   });
 });

@@ -75,7 +75,10 @@ describe('Apollo Federation v2 Supergraph Composition & Cross-Subgraph Query', (
               title: string;
               price: number;
               reviews: unknown[];
+              reviewCount: number;
               inventory: unknown[];
+              totalStock: number;
+              inStock: boolean;
             };
           }>;
         };

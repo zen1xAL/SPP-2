@@ -2,7 +2,6 @@ import express from 'express';
 import cors from 'cors';
 import http from 'node:http';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { ApolloServer } from '@apollo/server';
 import { expressMiddleware } from '@apollo/server/express4';
 import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHttpServer';
@@ -11,15 +10,13 @@ import { useServer } from 'graphql-ws/lib/use/ws';
 import { getDatabase, type DatabaseSync } from './db.js';
 import { runDataIngestion } from './collectors/ingestion.js';
 import { createDataLoaders } from './dataloaders.js';
-import { createComplexityPlugin } from './complexity.js';
+import { createComplexityPlugin, type ComplexityContext } from './complexity.js';
 import { createTracingPlugin, updateSubscriptionCount } from './tracing.js';
 import { createSupergraphGateway } from './gateway.js';
-import { pubsub } from './pubsub.js';
+import { RealtimeTickerService } from './services/ticker-service.js';
+import { SERVER_CONFIG, COMPLEXITY_CONFIG } from './shared/constants.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-export interface ServerContext {
+export interface ServerContext extends ComplexityContext {
   db: DatabaseSync;
   dataLoaders: ReturnType<typeof createDataLoaders>;
 }
@@ -42,8 +39,8 @@ export async function createApp(customDb?: DatabaseSync) {
     plugins: [
       ApolloServerPluginDrainHttpServer({ httpServer }),
       createComplexityPlugin({
-        maxComplexity: 1000,
-        maxDepth: 6
+        maxComplexity: COMPLEXITY_CONFIG.DEFAULT_MAX_COMPLEXITY,
+        maxDepth: COMPLEXITY_CONFIG.DEFAULT_MAX_DEPTH
       }),
       createTracingPlugin()
     ]
@@ -53,7 +50,7 @@ export async function createApp(customDb?: DatabaseSync) {
 
   const wsServer = new WebSocketServer({
     server: httpServer,
-    path: '/graphql'
+    path: SERVER_CONFIG.SUBSCRIPTIONS_PATH
   });
 
   useServer(
@@ -73,71 +70,44 @@ export async function createApp(customDb?: DatabaseSync) {
     wsServer as unknown as Parameters<typeof useServer>[1]
   );
 
-  app.use(
-    '/graphql',
-    expressMiddleware(server, {
-      context: async (): Promise<ServerContext> => ({
-        db,
-        dataLoaders: createDataLoaders(db)
-      })
-    }) as unknown as express.RequestHandler
-  );
+  const apolloHandler = expressMiddleware(server, {
+    context: async (): Promise<ServerContext> => ({
+      db,
+      dataLoaders: createDataLoaders(db)
+    })
+  });
 
-  const clientDist = path.resolve(process.cwd(), 'dist/client');
+  app.use(SERVER_CONFIG.GRAPHQL_ENDPOINT, apolloHandler as unknown as express.RequestHandler);
+
+  const clientDist = path.resolve(process.cwd(), SERVER_CONFIG.CLIENT_DIST_PATH);
   app.use(express.static(clientDist));
   app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/graphql')) return next();
+    if (req.path.startsWith(SERVER_CONFIG.GRAPHQL_ENDPOINT)) {
+      return next();
+    }
     res.sendFile(path.join(clientDist, 'index.html'), (err) => {
       if (err) next();
     });
   });
 
-  return { app, httpServer, server, db, wsServer };
+  const tickerService = new RealtimeTickerService(db);
+
+  return { app, httpServer, server, db, wsServer, tickerService };
 }
 
-function startRealtimeTickerGenerator(db: DatabaseSync) {
-  setInterval(() => {
-    try {
-      const randomProduct = db.prepare(`
-        SELECT id, title, price FROM products ORDER BY RANDOM() LIMIT 1
-      `).get() as { id: string; title: string; price: number } | undefined;
-
-      if (!randomProduct) return;
-
-      const changePercent = Math.round((Math.random() * 4 - 2) * 10) / 10;
-      if (changePercent === 0) return;
-
-      const newPrice = Math.max(1, Math.round((randomProduct.price * (1 + changePercent / 100)) * 100) / 100);
-      const now = new Date().toISOString();
-
-      db.prepare('UPDATE products SET price = ? WHERE id = ?').run(newPrice, randomProduct.id);
-      db.prepare('INSERT INTO price_history (id, product_id, price, recorded_at) VALUES (?, ?, ?, ?)')
-        .run(`ph-${randomProduct.id}-${Date.now()}`, randomProduct.id, newPrice, now);
-
-      pubsub.publishTicker({
-        productId: randomProduct.id,
-        title: randomProduct.title,
-        oldPrice: randomProduct.price,
-        newPrice,
-        changePercent,
-        timestamp: now
-      });
-    } catch {
-    }
-  }, 4000);
-}
-
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || SERVER_CONFIG.DEFAULT_PORT;
 
 if (process.env.NODE_ENV !== 'test') {
-  createApp().then(({ httpServer, db }) => {
-    startRealtimeTickerGenerator(db);
-    httpServer.listen(PORT, () => {
-      console.log(`[Lab 5] Supergraph Gateway running at http://localhost:${PORT}/graphql`);
-      console.log(`[Lab 5] GraphQL Subscriptions active at ws://localhost:${PORT}/graphql`);
+  createApp()
+    .then(({ httpServer, tickerService }) => {
+      tickerService.start();
+      httpServer.listen(PORT, () => {
+        console.log(`[Lab 5] Supergraph Gateway running at http://localhost:${PORT}${SERVER_CONFIG.GRAPHQL_ENDPOINT}`);
+        console.log(`[Lab 5] GraphQL Subscriptions active at ws://localhost:${PORT}${SERVER_CONFIG.SUBSCRIPTIONS_PATH}`);
+      });
+    })
+    .catch((err) => {
+      console.error('Failed to start server:', err);
+      process.exit(1);
     });
-  }).catch((err) => {
-    console.error('Failed to start server:', err);
-    process.exit(1);
-  });
 }

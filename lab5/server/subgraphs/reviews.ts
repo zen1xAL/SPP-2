@@ -4,6 +4,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import { v4 as uuidv4 } from 'uuid';
 import type { ReviewRecord, ProductRecord } from '../db.js';
 import { pubsub } from '../pubsub.js';
+import { REVIEWS_CONFIG } from '../shared/constants.js';
 import type { GraphQLContext } from './products.js';
 
 export const reviewsTypeDefs = gql`
@@ -30,74 +31,78 @@ export const reviewsTypeDefs = gql`
   }
 `;
 
+interface AddReviewArgs {
+  productId: string;
+  author: string;
+  rating: number;
+  comment: string;
+}
+
+interface AvgRatingResult {
+  avg_rating: number | null;
+}
+
+function calculateAverageRating(reviews: readonly ReviewRecord[], fallbackRating: number): number {
+  if (reviews.length === 0) {
+    return fallbackRating;
+  }
+  const sum = reviews.reduce((acc, r) => acc + r.rating, 0);
+  return Math.round((sum / reviews.length) * 10) / 10;
+}
+
 export function createReviewsSubgraph(db: DatabaseSync) {
   return buildSubgraphSchema([
     {
       typeDefs: reviewsTypeDefs,
       resolvers: {
         Review: {
-          __resolveReference(ref: { id: string }) {
-            return db.prepare('SELECT * FROM reviews WHERE id = ?').get(ref.id) as ReviewRecord | undefined;
+          __resolveReference(ref: { id: string }): ReviewRecord | undefined {
+            const row = db.prepare('SELECT * FROM reviews WHERE id = ?').get(ref.id);
+            return row as ReviewRecord | undefined;
           },
-          createdAt(review: ReviewRecord) {
+          createdAt(review: ReviewRecord): string {
             return review.created_at;
           },
-          productId(review: ReviewRecord) {
+          productId(review: ReviewRecord): string {
             return review.product_id;
           }
         },
         Product: {
-          async reviews(product: ProductRecord, _: unknown, context: GraphQLContext) {
+          async reviews(product: ProductRecord, _: unknown, context: GraphQLContext): Promise<ReviewRecord[]> {
             return await context.dataLoaders.reviewsByProductId.load(product.id);
           },
-          async reviewCount(product: ProductRecord, _: unknown, context: GraphQLContext) {
+          async reviewCount(product: ProductRecord, _: unknown, context: GraphQLContext): Promise<number> {
             const list = await context.dataLoaders.reviewsByProductId.load(product.id);
             return list.length;
           },
-          async averageRating(product: ProductRecord, _: unknown, context: GraphQLContext) {
+          async averageRating(product: ProductRecord, _: unknown, context: GraphQLContext): Promise<number> {
             const list = await context.dataLoaders.reviewsByProductId.load(product.id);
-            if (list.length === 0) return product.rating || 0;
-            const sum = list.reduce((acc, r) => acc + r.rating, 0);
-            return Math.round((sum / list.length) * 10) / 10;
+            return calculateAverageRating(list, product.rating || 0);
           }
         },
         Mutation: {
-          addReview(
-            _: unknown,
-            {
-              productId,
-              author,
-              rating,
-              comment
-            }: {
-              productId: string;
-              author: string;
-              rating: number;
-              comment: string;
-            }
-          ) {
-
+          addReview(_: unknown, { productId, author, rating, comment }: AddReviewArgs): ReviewRecord {
             const product = db.prepare('SELECT * FROM products WHERE id = ?').get(productId) as ProductRecord | undefined;
             if (!product) {
               throw new Error(`Product with ID "${productId}" not found.`);
             }
 
-            const id = `rev-${uuidv4().slice(0, 8)}`;
+            const id = `rev-${uuidv4().slice(0, REVIEWS_CONFIG.ID_HASH_LENGTH)}`;
             const createdAt = new Date().toISOString();
-            const safeRating = Math.max(1, Math.min(5, Math.round(rating)));
+            const safeRating = Math.max(REVIEWS_CONFIG.MIN_RATING, Math.min(REVIEWS_CONFIG.MAX_RATING, Math.round(rating)));
 
             db.prepare(`
               INSERT INTO reviews (id, product_id, author, rating, comment, created_at)
               VALUES (?, ?, ?, ?, ?, ?)
             `).run(id, productId, author, safeRating, comment, createdAt);
 
-            const avgRow = db.prepare(`
-              SELECT AVG(rating) as avg_rating FROM reviews WHERE product_id = ?
-            `).get(productId) as { avg_rating: number };
+            const avgRow = db.prepare(
+              'SELECT AVG(rating) as avg_rating FROM reviews WHERE product_id = ?'
+            ).get(productId) as AvgRatingResult | undefined;
 
-            if (avgRow && avgRow.avg_rating) {
-              db.prepare('UPDATE products SET rating = ? WHERE id = ?')
-                .run(Math.round(avgRow.avg_rating * 10) / 10, productId);
+            if (avgRow && typeof avgRow.avg_rating === 'number') {
+              const roundedAvg = Math.round(avgRow.avg_rating * 10) / 10;
+              db.prepare('UPDATE products SET rating = ? WHERE id = ?').run(roundedAvg, productId);
             }
 
             pubsub.publishReview({

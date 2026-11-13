@@ -1,6 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
 import fs from 'node:fs';
+import { DB_CONFIG } from './shared/constants.js';
 
 export type { DatabaseSync } from 'node:sqlite';
 
@@ -56,27 +57,40 @@ export interface DatabaseStats {
   totalRecords: number;
 }
 
+interface CountQueryResult {
+  count: number;
+}
+
 let dbInstance: DatabaseSync | null = null;
+
+export function getTableCount(db: DatabaseSync, tableName: string): number {
+  const row = db.prepare(`SELECT COUNT(*) as count FROM ${tableName}`).get() as unknown;
+  if (row && typeof row === 'object' && 'count' in row && typeof (row as CountQueryResult).count === 'number') {
+    return (row as CountQueryResult).count;
+  }
+  return 0;
+}
 
 export function getDatabase(customPath?: string): DatabaseSync {
   if (dbInstance && !customPath) {
     return dbInstance;
   }
 
-  const defaultDir = path.resolve(process.cwd(), 'data');
+  const defaultDir = path.resolve(process.cwd(), DB_CONFIG.DEFAULT_DIR_NAME);
   if (!fs.existsSync(defaultDir)) {
     fs.mkdirSync(defaultDir, { recursive: true });
   }
 
-  const targetPath = customPath ?? path.join(defaultDir, 'marketplace.db');
+  const targetPath = customPath ?? path.join(defaultDir, DB_CONFIG.DATABASE_FILENAME);
   const db = new DatabaseSync(targetPath);
 
   try {
     db.exec('PRAGMA journal_mode = WAL;');
     db.exec('PRAGMA synchronous = NORMAL;');
     db.exec('PRAGMA foreign_keys = ON;');
-    db.exec('PRAGMA busy_timeout = 10000;');
-  } catch {
+    db.exec(`PRAGMA busy_timeout = ${DB_CONFIG.BUSY_TIMEOUT_MS};`);
+  } catch (err: unknown) {
+    console.warn('[DatabaseSync] SQLite PRAGMA configuration warning:', err instanceof Error ? err.message : String(err));
   }
 
   initSchema(db);
@@ -152,16 +166,16 @@ export function initSchema(db: DatabaseSync): void {
 }
 
 export function getDatabaseStats(db: DatabaseSync): DatabaseStats {
-  const p = (db.prepare('SELECT COUNT(*) as count FROM products').get() as { count: number }).count;
-  const r = (db.prepare('SELECT COUNT(*) as count FROM reviews').get() as { count: number }).count;
-  const ph = (db.prepare('SELECT COUNT(*) as count FROM price_history').get() as { count: number }).count;
-  const s = (db.prepare('SELECT COUNT(*) as count FROM stocks').get() as { count: number }).count;
+  const productsCount = getTableCount(db, 'products');
+  const reviewsCount = getTableCount(db, 'reviews');
+  const priceHistoryCount = getTableCount(db, 'price_history');
+  const stocksCount = getTableCount(db, 'stocks');
 
   return {
-    productsCount: p,
-    reviewsCount: r,
-    priceHistoryCount: ph,
-    stocksCount: s,
-    totalRecords: p + r + ph + s
+    productsCount,
+    reviewsCount,
+    priceHistoryCount,
+    stocksCount,
+    totalRecords: productsCount + reviewsCount + priceHistoryCount + stocksCount
   };
 }

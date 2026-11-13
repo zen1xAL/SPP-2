@@ -8,6 +8,7 @@ import { QueryStudio } from './components/QueryStudio.js';
 import { Metrics } from './components/Metrics.js';
 import { GET_SYSTEM_METRICS } from './graphql/operations.js';
 import type { DatabaseStats, SystemMetrics } from './types.js';
+import { APP_CONFIG, CLIENT_THEME } from './constants.js';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('catalog');
@@ -16,7 +17,7 @@ export const App: React.FC = () => {
     systemMetrics: SystemMetrics;
     databaseStats: DatabaseStats;
   }>(GET_SYSTEM_METRICS, {
-    pollInterval: 5000
+    pollInterval: APP_CONFIG.SYSTEM_METRICS_POLL_MS
   });
 
   return (
@@ -37,11 +38,11 @@ export const App: React.FC = () => {
 
       <footer
         style={{
-          borderTop: '1px solid #1e293b',
+          borderTop: `1px solid ${CLIENT_THEME.colors.border}`,
           padding: '16px 24px',
-          backgroundColor: '#090d16',
+          backgroundColor: CLIENT_THEME.colors.bgDark,
           fontSize: '12px',
-          color: '#64748b',
+          color: CLIENT_THEME.colors.textMuted,
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center'
@@ -57,4 +58,3 @@ export const App: React.FC = () => {
     </div>
   );
 };
-

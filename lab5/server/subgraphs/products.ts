@@ -7,6 +7,8 @@ import { getServerMetrics } from '../tracing.js';
 import { runDataIngestion } from '../collectors/ingestion.js';
 import { pubsub, type TickerEvent, type NewReviewEvent, type StockUpdateEvent } from '../pubsub.js';
 import type { GraphQLDataLoaders } from '../dataloaders.js';
+import { encodeRelayCursor, decodeRelayCursor } from '../shared/cursor.js';
+import { REVIEWS_CONFIG } from '../shared/constants.js';
 
 export interface GraphQLContext {
   db: DatabaseSync;
@@ -142,16 +144,108 @@ export const productsTypeDefs = gql`
   }
 `;
 
+interface ProductsQueryArgs {
+  first?: number;
+  after?: string;
+  search?: string;
+  category?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  sortBy?: string;
+  sortOrder?: string;
+}
+
+interface CreateProductArgs {
+  title: string;
+  description?: string;
+  price: number;
+  category: string;
+  brand: string;
+}
+
+const SORT_COLUMNS_MAP: Record<string, string> = {
+  price: 'price',
+  rating: 'rating',
+  title: 'title',
+  created_at: 'created_at'
+};
+
+const DEFAULT_SORT_COLUMN = 'created_at';
+const DEFAULT_PAGE_LIMIT = 15;
+const MAX_PAGE_LIMIT = 100;
+
+interface FilterBuildResult {
+  whereSql: string;
+  params: (string | number)[];
+}
+
+function buildProductSearchFilter(args: ProductsQueryArgs): FilterBuildResult {
+  const whereClauses: string[] = [];
+  const params: (string | number)[] = [];
+
+  if (args.search && args.search.trim()) {
+    whereClauses.push('(title LIKE ? OR description LIKE ? OR brand LIKE ?)');
+    const term = `%${args.search.trim()}%`;
+    params.push(term, term, term);
+  }
+
+  if (args.category && args.category !== 'all') {
+    whereClauses.push('category = ?');
+    params.push(args.category);
+  }
+
+  if (args.minPrice !== undefined && args.minPrice !== null) {
+    whereClauses.push('price >= ?');
+    params.push(args.minPrice);
+  }
+
+  if (args.maxPrice !== undefined && args.maxPrice !== null) {
+    whereClauses.push('price <= ?');
+    params.push(args.maxPrice);
+  }
+
+  const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+  return { whereSql, params };
+}
+
+function buildRelayProductConnection(
+  rows: ProductRecord[],
+  limit: number,
+  offset: number,
+  totalCount: number
+) {
+  const hasNextPage = rows.length > limit;
+  const nodes = hasNextPage ? rows.slice(0, limit) : rows;
+
+  const edges = nodes.map((node, index) => {
+    const itemOffset = offset + index;
+    const cursor = encodeRelayCursor(itemOffset);
+    return { cursor, node };
+  });
+
+  return {
+    edges,
+    pageInfo: {
+      hasNextPage,
+      hasPreviousPage: offset > 0,
+      startCursor: edges[0]?.cursor ?? null,
+      endCursor: edges[edges.length - 1]?.cursor ?? null
+    },
+    totalCount
+  };
+}
+
 export function createProductsSubgraph(db: DatabaseSync) {
   return buildSubgraphSchema([
     {
       typeDefs: productsTypeDefs,
       resolvers: {
         Product: {
-          __resolveReference(ref: { id: string }) {
-            return db.prepare('SELECT * FROM products WHERE id = ?').get(ref.id) as ProductRecord | undefined;
+          __resolveReference(ref: { id: string }): ProductRecord | undefined {
+            const row = db.prepare('SELECT * FROM products WHERE id = ?').get(ref.id);
+            return row as ProductRecord | undefined;
           },
-          createdAt(product: ProductRecord) {
+          createdAt(product: ProductRecord): string {
             return product.created_at;
           },
           async priceHistory(product: ProductRecord, _: unknown, context: GraphQLContext) {
@@ -164,8 +258,9 @@ export function createProductsSubgraph(db: DatabaseSync) {
           }
         },
         Query: {
-          product(_: unknown, { id }: { id: string }) {
-            return db.prepare('SELECT * FROM products WHERE id = ?').get(id) as ProductRecord | undefined;
+          product(_: unknown, { id }: { id: string }): ProductRecord | undefined {
+            const row = db.prepare('SELECT * FROM products WHERE id = ?').get(id);
+            return row as ProductRecord | undefined;
           },
           categories() {
             return db.prepare('SELECT * FROM categories ORDER BY name ASC').all();
@@ -176,69 +271,20 @@ export function createProductsSubgraph(db: DatabaseSync) {
           databaseStats() {
             return getDatabaseStats(db);
           },
-          products(
-            _: unknown,
-            args: {
-              first?: number;
-              after?: string;
-              search?: string;
-              category?: string;
-              minPrice?: number;
-              maxPrice?: number;
-              sortBy?: string;
-              sortOrder?: string;
-            }
-          ) {
-            const limit = Math.min(Math.max(args.first ?? 15, 1), 100);
-            let offset = 0;
+          products(_: unknown, args: ProductsQueryArgs) {
+            const limit = Math.min(Math.max(args.first ?? DEFAULT_PAGE_LIMIT, 1), MAX_PAGE_LIMIT);
+            const decodedOffset = decodeRelayCursor(args.after);
+            const offset = decodedOffset !== null ? decodedOffset + 1 : 0;
 
-            if (args.after) {
-              try {
-                const decoded = Buffer.from(args.after, 'base64').toString('utf8');
-                const parsed = parseInt(decoded.replace('cursor:', ''), 10);
-                if (!isNaN(parsed) && parsed >= 0) {
-                  offset = parsed + 1;
-                }
-              } catch {
-                offset = 0;
-              }
-            }
+            const { whereSql, params } = buildProductSearchFilter(args);
 
-            const whereClauses: string[] = [];
-            const params: (string | number)[] = [];
-
-            if (args.search && args.search.trim()) {
-              whereClauses.push('(title LIKE ? OR description LIKE ? OR brand LIKE ?)');
-              const term = `%${args.search.trim()}%`;
-              params.push(term, term, term);
-            }
-
-            if (args.category && args.category !== 'all') {
-              whereClauses.push('category = ?');
-              params.push(args.category);
-            }
-
-            if (args.minPrice !== undefined && args.minPrice !== null) {
-              whereClauses.push('price >= ?');
-              params.push(args.minPrice);
-            }
-
-            if (args.maxPrice !== undefined && args.maxPrice !== null) {
-              whereClauses.push('price <= ?');
-              params.push(args.maxPrice);
-            }
-
-            const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
-
-            let sortColumn = 'created_at';
-            if (args.sortBy === 'price') sortColumn = 'price';
-            else if (args.sortBy === 'rating') sortColumn = 'rating';
-            else if (args.sortBy === 'title') sortColumn = 'title';
-
+            const sortKey = args.sortBy ?? DEFAULT_SORT_COLUMN;
+            const sortColumn = SORT_COLUMNS_MAP[sortKey] ?? DEFAULT_SORT_COLUMN;
             const sortDir = args.sortOrder?.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
 
             const countSql = `SELECT COUNT(*) as count FROM products ${whereSql}`;
-            const totalCount = (db.prepare(countSql).get(...params) as { count: number }).count;
+            const countRow = db.prepare(countSql).get(...params) as { count: number } | undefined;
+            const totalCount = countRow?.count ?? 0;
 
             const querySql = `
               SELECT * FROM products
@@ -248,45 +294,12 @@ export function createProductsSubgraph(db: DatabaseSync) {
             `;
             const rows = db.prepare(querySql).all(...params, limit + 1, offset) as unknown as ProductRecord[];
 
-            const hasNextPage = rows.length > limit;
-            const nodes = hasNextPage ? rows.slice(0, limit) : rows;
-
-            const edges = nodes.map((node, index) => {
-              const itemOffset = offset + index;
-              const cursor = Buffer.from(`cursor:${itemOffset}`).toString('base64');
-              return { cursor, node };
-            });
-
-            return {
-              edges,
-              pageInfo: {
-                hasNextPage,
-                hasPreviousPage: offset > 0,
-                startCursor: edges.length > 0 ? edges[0]!.cursor : null,
-                endCursor: edges.length > 0 ? edges[edges.length - 1]!.cursor : null
-              },
-              totalCount
-            };
+            return buildRelayProductConnection(rows, limit, offset, totalCount);
           }
         },
         Mutation: {
-          createProduct(
-            _: unknown,
-            {
-              title,
-              description,
-              price,
-              category,
-              brand
-            }: {
-              title: string;
-              description?: string;
-              price: number;
-              category: string;
-              brand: string;
-            }
-          ) {
-            const id = `prod-${uuidv4().slice(0, 8)}`;
+          createProduct(_: unknown, { title, description, price, category, brand }: CreateProductArgs): ProductRecord {
+            const id = `prod-${uuidv4().slice(0, REVIEWS_CONFIG.ID_HASH_LENGTH)}`;
             const createdAt = new Date().toISOString();
             const rating = 4.5;
             const source = 'manual';

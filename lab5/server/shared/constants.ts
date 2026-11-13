@@ -1,0 +1,86 @@
+export const DB_CONFIG = {
+  BUSY_TIMEOUT_MS: 10_000,
+  DEFAULT_DIR_NAME: 'data',
+  DATABASE_FILENAME: 'marketplace.db'
+} as const;
+
+export const PUBSUB_TOPICS = {
+  TICKER_UPDATED: 'TICKER_UPDATED',
+  REVIEW_ADDED: 'REVIEW_ADDED',
+  STOCK_UPDATED: 'STOCK_UPDATED'
+} as const;
+
+export type PubSubTopic = (typeof PUBSUB_TOPICS)[keyof typeof PUBSUB_TOPICS];
+
+export const PUBSUB_CONFIG = {
+  MAX_LISTENERS: 100
+} as const;
+
+export const COMPLEXITY_CONFIG = {
+  DEFAULT_MAX_COMPLEXITY: 1000,
+  DEFAULT_MAX_DEPTH: 6,
+  SCALAR_COST: 1,
+  OBJECT_COST: 2,
+  DEFAULT_LIST_MULTIPLIER: 3,
+  ERROR_CODE: 'GRAPHQL_VALIDATION_FAILED'
+} as const;
+
+export const TRACING_CONFIG = {
+  SPANS_MAX_RETAINED: 15,
+  DECIMAL_PRECISION: 100,
+  BYTES_PER_MB: 1024 * 1024,
+  MB_DECIMAL_PRECISION: 10,
+  MS_PER_SECOND: 1000
+} as const;
+
+export const SERVER_CONFIG = {
+  DEFAULT_PORT: 4000,
+  TICKER_INTERVAL_MS: 4000,
+  SUBSCRIPTIONS_PATH: '/graphql',
+  GRAPHQL_ENDPOINT: '/graphql',
+  CLIENT_DIST_PATH: 'dist/client',
+  TICKER_MIN_PRICE: 1,
+  TICKER_FLUCTUATION_SPAN: 4,
+  TICKER_FLUCTUATION_OFFSET: 2
+} as const;
+
+export const INGESTION_CONFIG = {
+  TARGET_RECORD_COUNT: 10_000
+} as const;
+
+export const SEED_CONFIG = {
+  TOTAL_PRODUCTS: 400,
+  PRICE_HISTORY_POINTS_PER_PRODUCT: 25,
+  REVIEWS_BASE_COUNT: 4,
+  MILLISECONDS_PER_DAY: 86_400_000,
+  BASE_RATING_OFFSET: 3.2,
+  BASE_PRICE_OFFSET: 49.99
+} as const;
+
+export const API_COLLECTOR_CONFIG = {
+  ENDPOINT_URL: 'https://dummyjson.com/products?limit=50',
+  REQUEST_TIMEOUT_MS: 4000,
+  FALLBACK_COUNT: 25,
+  DEFAULT_BRAND: 'Global Brand',
+  DEFAULT_RATING: 4.2,
+  SOURCE_NAME: 'api'
+} as const;
+
+export const NEWS_COLLECTOR_CONFIG = {
+  TOP_STORIES_URL: 'https://hacker-news.firebaseio.com/v0/topstories.json?limitToFirst=20&orderBy="$key"',
+  REQUEST_TIMEOUT_MS: 4000,
+  STORIES_SLICE_LIMIT: 15,
+  FALLBACK_REVIEW_COUNT: 30,
+  FALLBACK_INTERVAL_HOURS: 2,
+  MS_PER_HOUR: 3_600_000
+} as const;
+
+export const REVIEWS_CONFIG = {
+  MIN_RATING: 1,
+  MAX_RATING: 5,
+  ID_HASH_LENGTH: 8
+} as const;
+
+export const INVENTORY_CONFIG = {
+  DEFAULT_WAREHOUSE_NAME: 'Main Warehouse'
+} as const;
