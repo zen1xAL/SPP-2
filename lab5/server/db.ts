@@ -71,14 +71,12 @@ export function getDatabase(customPath?: string): DatabaseSync {
   const targetPath = customPath ?? path.join(defaultDir, 'marketplace.db');
   const db = new DatabaseSync(targetPath);
 
-  // Оптимизация производительности: WAL режим, synchronous NORMAL
   try {
     db.exec('PRAGMA journal_mode = WAL;');
     db.exec('PRAGMA synchronous = NORMAL;');
     db.exec('PRAGMA foreign_keys = ON;');
     db.exec('PRAGMA busy_timeout = 10000;');
   } catch {
-    // Ignore pragma errors if in-memory
   }
 
   initSchema(db);
@@ -143,7 +141,6 @@ export function initSchema(db: DatabaseSync): void {
       FOREIGN KEY (warehouse_id) REFERENCES warehouses(id) ON DELETE CASCADE
     );
 
-    -- Индексы для сверхбыстрой выборки и пагинации
     CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
     CREATE INDEX IF NOT EXISTS idx_products_price ON products(price);
     CREATE INDEX IF NOT EXISTS idx_products_rating ON products(rating);

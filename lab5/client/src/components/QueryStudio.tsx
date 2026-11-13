@@ -17,7 +17,6 @@ export const QueryStudio: React.FC = () => {
   const [queryResult, setQueryResult] = useState<string>('// Нажмите «Выполнить GraphQL запрос» для получения ответа сервера...');
   const [executionTime, setExecutionTime] = useState<number | null>(null);
 
-  // Динамическое формирование строки запроса GraphQL
   const dynamicQueryString = `query DynamicCatalogQuery {
   products(first: ${limit}) {
     totalCount

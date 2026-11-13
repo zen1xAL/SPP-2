@@ -9,7 +9,7 @@ export const Metrics: React.FC = () => {
     systemMetrics: SystemMetrics;
     databaseStats: DatabaseStats;
   }>(GET_SYSTEM_METRICS, {
-    pollInterval: 3000 // обновлять метрики каждые 3 секунды
+    pollInterval: 3000 
   });
 
   const [triggerIngestion, { loading: ingesting }] = useMutation(TRIGGER_INGESTION, {
@@ -43,7 +43,6 @@ export const Metrics: React.FC = () => {
         </button>
       </div>
 
-      {/* Блок 1: Доказательство объема данных (> 10 000 записей) */}
       <div className="card" style={{ marginBottom: '20px' }}>
         <div className="card-title">
           <Database size={16} color="#38bdf8" />
@@ -89,7 +88,6 @@ export const Metrics: React.FC = () => {
         </div>
       </div>
 
-      {/* Блок 2: Архитектура Apollo Federation v2 */}
       <div className="card" style={{ marginBottom: '20px' }}>
         <div className="card-title">
           <Network size={16} color="#10b981" />
@@ -129,7 +127,6 @@ export const Metrics: React.FC = () => {
         </div>
       </div>
 
-      {/* Блок 3: Метрики нагрузки и производительность */}
       <div className="card">
         <div className="card-title">
           <Activity size={16} color="#f59e0b" />

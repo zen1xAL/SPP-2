@@ -114,7 +114,6 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ productI
           </div>
         </div>
 
-        {/* Уровень 3: Вложенность – Склады и остатки (из Subgraph inventory) */}
         <div className="nested-section">
           <div className="nested-title">
             <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -148,7 +147,6 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ productI
           </div>
         </div>
 
-        {/* Уровень 4: Вложенность – Отзывы покупателей (из Subgraph reviews) */}
         <div className="nested-section">
           <div className="nested-title">
             <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>

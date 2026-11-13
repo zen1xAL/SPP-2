@@ -55,7 +55,6 @@ export function createTracingPlugin(): ApolloServerPlugin {
               const fieldStart = performance.now();
               return () => {
                 const durationMs = Math.round((performance.now() - fieldStart) * 100) / 100;
-                // Записываем только значимые резолверы верхнего уровня и связей
                 if (!info.fieldName.startsWith('__')) {
                   spans.push({
                     path: info.path.key.toString(),
@@ -82,7 +81,7 @@ export function createTracingPlugin(): ApolloServerPlugin {
               tracing: {
                 durationMs: totalDurationMs,
                 resolverCount: spans.length,
-                spans: spans.slice(0, 15) // топ 15 вызовов
+                spans: spans.slice(0, 15)
               }
             };
           }

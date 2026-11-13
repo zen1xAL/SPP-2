@@ -7,7 +7,6 @@ import { PlusCircle, MessageSquarePlus, PackagePlus, CheckCircle2 } from 'lucide
 export const MutationsForm: React.FC = () => {
   const { data: catData } = useQuery<{ categories: Category[]; warehouses: Warehouse[] }>(GET_CATEGORIES);
 
-  // 1. Форма создания товара
   const [prodTitle, setProdTitle] = useState('');
   const [prodDesc, setProdDesc] = useState('');
   const [prodPrice, setProdPrice] = useState(149.99);
@@ -15,14 +14,12 @@ export const MutationsForm: React.FC = () => {
   const [prodBrand, setProdBrand] = useState('NexusCore');
   const [prodSuccess, setProdSuccess] = useState(false);
 
-  // 2. Форма добавления отзыва
   const [revProductId, setRevProductId] = useState('api-prod-1');
   const [revAuthor, setRevAuthor] = useState('');
   const [revRating, setRevRating] = useState(5);
   const [revComment, setRevComment] = useState('');
   const [revSuccess, setRevSuccess] = useState(false);
 
-  // 3. Форма обновления остатка
   const [stockProductId, setStockProductId] = useState('api-prod-1');
   const [stockWarehouseId, setStockWarehouseId] = useState('wh-1');
   const [stockQty, setStockQty] = useState(50);
@@ -106,7 +103,6 @@ export const MutationsForm: React.FC = () => {
       </div>
 
       <div className="grid-3">
-        {/* Карточка 1: Создание товара */}
         <div className="card">
           <div className="card-title">
             <PlusCircle size={16} color="#38bdf8" />
@@ -186,7 +182,6 @@ export const MutationsForm: React.FC = () => {
           </form>
         </div>
 
-        {/* Карточка 2: Добавление отзыва */}
         <div className="card">
           <div className="card-title">
             <MessageSquarePlus size={16} color="#f59e0b" />
@@ -258,7 +253,6 @@ export const MutationsForm: React.FC = () => {
           </form>
         </div>
 
-        {/* Карточка 3: Обновление остатков на складе */}
         <div className="card">
           <div className="card-title">
             <PackagePlus size={16} color="#10b981" />

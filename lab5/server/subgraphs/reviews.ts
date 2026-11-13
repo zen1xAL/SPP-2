@@ -76,7 +76,7 @@ export function createReviewsSubgraph(db: DatabaseSync) {
               comment: string;
             }
           ) {
-            // Проверяем существование товара
+
             const product = db.prepare('SELECT * FROM products WHERE id = ?').get(productId) as ProductRecord | undefined;
             if (!product) {
               throw new Error(`Product with ID "${productId}" not found.`);

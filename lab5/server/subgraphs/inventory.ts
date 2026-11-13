@@ -105,7 +105,6 @@ export function createInventorySubgraph(db: DatabaseSync) {
             const safeQty = Math.max(0, Math.round(quantity));
             const now = new Date().toISOString();
 
-            // Проверяем существующую запись остатка
             const existing = db.prepare(`
               SELECT * FROM stocks WHERE product_id = ? AND warehouse_id = ?
             `).get(productId, warehouseId) as StockRecord | undefined;

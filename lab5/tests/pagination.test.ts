@@ -23,7 +23,7 @@ describe('Search, Filtering, Sorting & Relay Cursor Pagination', () => {
   });
 
   it('should paginate items according to Relay Connection specification', async () => {
-    // 1-я страница: first 5
+
     const page1Query = `
       query PageOne {
         products(first: 5) {
@@ -61,7 +61,6 @@ describe('Search, Filtering, Sorting & Relay Cursor Pagination', () => {
 
     const firstPageIds = data1.edges.map((e: any) => e.node.id);
 
-    // 2-я страница: first 5 after endCursor
     const page2Query = `
       query PageTwo($after: String!) {
         products(first: 5, after: $after) {
@@ -92,7 +91,6 @@ describe('Search, Filtering, Sorting & Relay Cursor Pagination', () => {
 
     const secondPageIds = data2.edges.map((e: any) => e.node.id);
 
-    // Проверяем, что элементы 1-й и 2-й страницы не пересекаются
     for (const id of secondPageIds) {
       expect(firstPageIds).not.toContain(id);
     }

@@ -23,12 +23,10 @@ describe('Data Ingestion & Volume (>10,000 records from 3 sources)', () => {
     const sources = db.prepare('SELECT DISTINCT source FROM products').all() as { source: string }[];
     const sourceNames = sources.map((s) => s.source);
 
-    // Источник 1: Внешний API
     expect(sourceNames).toContain('api');
-    // Источник 3: Генератор большого объема
+
     expect(sourceNames).toContain('generator');
 
-    // Источник 2: Новостной / RSS фид отзывов
     const feedReviews = db.prepare("SELECT COUNT(*) as count FROM reviews WHERE id LIKE 'feed-rev-%'").get() as { count: number };
     expect(feedReviews.count).toBeGreaterThan(0);
   });

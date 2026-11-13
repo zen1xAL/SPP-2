@@ -81,7 +81,6 @@ describe('Mutations & GraphQL Subscriptions Real-time Events', () => {
       expect(reviewData.rating).toBe(5);
     }
 
-    // Проверяем доставку события в поток подписки
     const event = await reviewIterator.next();
     expect(event.done).toBe(false);
     expect((event.value as NewReviewEvent).author).toBe('Senior QA Tester');

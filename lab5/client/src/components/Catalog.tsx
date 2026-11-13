@@ -14,16 +14,14 @@ export const Catalog: React.FC = () => {
   const [sortBy, setSortBy] = useState('created_at');
   const [sortOrder, setSortOrder] = useState('DESC');
 
-  // Relay Cursor Pagination State
   const [pageSize] = useState(12);
   const [cursorStack, setCursorStack] = useState<(string | null)[]>([null]);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
 
-  // Debounce search input
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
-      setCursorStack([null]); // Сброс на 1-ю страницу при поиске
+      setCursorStack([null]); 
     }, 300);
     return () => clearTimeout(timer);
   }, [search]);
@@ -62,7 +60,6 @@ export const Catalog: React.FC = () => {
 
   return (
     <div className="container">
-      {/* Панель фильтров и поиска */}
       <div className="controls-bar">
         <div className="search-input-wrapper">
           <input

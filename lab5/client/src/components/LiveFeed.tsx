@@ -14,7 +14,6 @@ interface FeedEntry {
 export const LiveFeed: React.FC = () => {
   const [feed, setFeed] = useState<FeedEntry[]>([]);
 
-  // 1. Подписка на изменение котировок
   useSubscription<{ tickerUpdated: TickerEvent }>(TICKER_SUBSCRIPTION, {
     onData: ({ data }) => {
       const item = data.data?.tickerUpdated;

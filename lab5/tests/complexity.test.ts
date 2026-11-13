@@ -20,7 +20,7 @@ describe('Load Control & Security: Query Complexity & Depth Limiting', () => {
       gateway,
       plugins: [
         createComplexityPlugin({
-          maxComplexity: 100, // Пониженный порог для тестирования лимитера
+          maxComplexity: 100, 
           maxDepth: 4
         })
       ]
@@ -84,7 +84,7 @@ describe('Load Control & Security: Query Complexity & Depth Limiting', () => {
   });
 
   it('should reject queries exceeding the depth limit with GRAPHQL_VALIDATION_FAILED', async () => {
-    // Вложенность глубже 4 уровней
+
     const deepQuery = `
       query TooDeepQuery {
         products(first: 1) {
@@ -118,7 +118,7 @@ describe('Load Control & Security: Query Complexity & Depth Limiting', () => {
   });
 
   it('should reject queries exceeding the complexity budget with GRAPHQL_VALIDATION_FAILED', async () => {
-    // Большой множитель first: 100 превысит бюджет complexity в 100
+
     const expensiveQuery = `
       query ExpensiveQuery {
         products(first: 90) {

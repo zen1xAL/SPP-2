@@ -75,11 +75,9 @@ describe('Apollo Federation v2 Supergraph Composition & Cross-Subgraph Query', (
       expect(firstProduct.id).toBeDefined();
       expect(firstProduct.title).toBeDefined();
 
-      // Проверка разрешения из подграфа Reviews
       expect(Array.isArray(firstProduct.reviews)).toBe(true);
       expect(firstProduct.reviewCount).toBeGreaterThanOrEqual(0);
 
-      // Проверка разрешения из подграфа Inventory
       expect(Array.isArray(firstProduct.inventory)).toBe(true);
       expect(typeof firstProduct.totalStock).toBe('number');
       expect(typeof firstProduct.inStock).toBe('boolean');
@@ -87,7 +85,7 @@ describe('Apollo Federation v2 Supergraph Composition & Cross-Subgraph Query', (
   });
 
   it('should support Query.product by ID with nested federated fields', async () => {
-    // Получаем реальный id товара
+
     const p = db.prepare('SELECT id FROM products LIMIT 1').get() as { id: string };
 
     const query = `

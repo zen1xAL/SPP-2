@@ -27,7 +27,6 @@ export function generateBulkData(): GeneratedSeedData {
     { id: 'wh-4', name: 'Automated Fulfillment Station', city: 'Berlin' }
   ];
 
-  // 1. Генерируем 400 разнообразных продуктов
   for (let i = 1; i <= 400; i++) {
     const adj = productAdjectives[i % productAdjectives.length]!;
     const noun = productNouns[i % productNouns.length]!;

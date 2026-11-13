@@ -18,7 +18,6 @@ export function createDataLoaders(db: DatabaseSync): GraphQLDataLoaders {
   let priceHistoryBatchCount = 0;
   let stocksBatchCount = 0;
 
-  // 1. DataLoader для отзывов (Reviews)
   const reviewsByProductId = new DataLoader<string, ReviewRecord[]>(async (productIds) => {
     reviewsBatchCount++;
     if (productIds.length === 0) return [];
@@ -37,7 +36,6 @@ export function createDataLoaders(db: DatabaseSync): GraphQLDataLoaders {
     return productIds.map((id) => map.get(id) || []);
   });
 
-  // 2. DataLoader для истории цен (Price History)
   const priceHistoryByProductId = new DataLoader<string, PriceHistoryRecord[]>(async (productIds) => {
     priceHistoryBatchCount++;
     if (productIds.length === 0) return [];
@@ -56,7 +54,6 @@ export function createDataLoaders(db: DatabaseSync): GraphQLDataLoaders {
     return productIds.map((id) => map.get(id) || []);
   });
 
-  // 3. DataLoader для складских остатков (Stocks)
   const stocksByProductId = new DataLoader<string, StockRecord[]>(async (productIds) => {
     stocksBatchCount++;
     if (productIds.length === 0) return [];

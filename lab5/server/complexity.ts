@@ -64,13 +64,11 @@ function analyzeSelectionSet(
       const field = selection as FieldNode;
       const fieldName = field.name.value;
 
-      // Игнорируем метаполя интроспекции (__schema, __typename)
       if (fieldName.startsWith('__')) {
         continue;
       }
 
       let multiplier = 1;
-      // Проверяем аргументы first или limit
       if (field.arguments) {
         for (const arg of field.arguments) {
           if (arg.name.value === 'first' || arg.name.value === 'limit') {
@@ -86,7 +84,7 @@ function analyzeSelectionSet(
         if (multiplier > 1) {
           childMultiplier = multiplier;
         } else if (fieldName === 'edges' || fieldName === 'node') {
-          childMultiplier = 1; // Обёртка Relay Connection наследует множитель родителя
+          childMultiplier = 1;
         } else if (fieldName === 'reviews' || fieldName === 'inventory' || fieldName === 'priceHistory' || fieldName.endsWith('s')) {
           childMultiplier = config.defaultListMultiplier ?? 3;
         }
@@ -111,7 +109,6 @@ export function createComplexityPlugin(config: ComplexityConfig = DEFAULT_COMPLE
       return {
         async validationDidStart() {
           return async (validationErrors) => {
-            // Если базовая валидация уже нашла синтаксические ошибки, не продолжаем
             if (validationErrors && validationErrors.length > 0) return;
           };
         },
@@ -120,7 +117,6 @@ export function createComplexityPlugin(config: ComplexityConfig = DEFAULT_COMPLE
 
           const { complexity, depth } = calculateQueryComplexity(requestContext.document, config);
 
-          // Проверяем глубину вложенности
           if (depth > config.maxDepth) {
             throw new GraphQLError(
               `Query rejected: Depth of ${depth} exceeds maximum permitted depth of ${config.maxDepth}.`,
@@ -134,7 +130,6 @@ export function createComplexityPlugin(config: ComplexityConfig = DEFAULT_COMPLE
             );
           }
 
-          // Проверяем суммарную сложность
           if (complexity > config.maxComplexity) {
             throw new GraphQLError(
               `Query rejected: Complexity score of ${complexity} exceeds budget of ${config.maxComplexity}.`,
@@ -148,7 +143,6 @@ export function createComplexityPlugin(config: ComplexityConfig = DEFAULT_COMPLE
             );
           }
 
-          // Сохраняем расчет в контексте для последующей передачи в extensions
           if (requestContext.contextValue) {
             (requestContext.contextValue as Record<string, unknown>).queryComplexity = complexity;
             (requestContext.contextValue as Record<string, unknown>).queryDepth = depth;

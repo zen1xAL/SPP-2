@@ -10,7 +10,6 @@ export async function runDataIngestion(db: DatabaseSync, forceRefresh = false): 
     return currentStats;
   }
 
-  // Очистка при forceRefresh
   if (forceRefresh) {
     db.exec(`
       DELETE FROM stocks;
@@ -22,37 +21,30 @@ export async function runDataIngestion(db: DatabaseSync, forceRefresh = false): 
     `);
   }
 
-  // 1. Источник 3: Локальный высокообъемный генератор (> 14 000 записей)
   const bulkData = generateBulkData();
 
-  // 2. Источник 1: Внешний REST API (DummyJSON / fallback)
   const apiProducts = await fetchApiProducts();
 
-  // Объединяем продукты и извлекаем категории
   const allProducts = [...bulkData.products, ...apiProducts];
   const allProductIds = allProducts.map((p) => p.id);
 
-  // 3. Источник 2: Новостной / RSS фид отзывов
   const feedReviews = await fetchNewsFeedReviews(allProductIds);
   const allReviews = [...bulkData.reviews, ...feedReviews];
 
-  // Извлекаем уникальные категории
   const categorySet = new Set<string>();
   for (const p of allProducts) {
     categorySet.add(p.category);
   }
 
-  // Выполняем вставку в рамках ОДНОЙ быстрой транзакции
   db.exec('BEGIN TRANSACTION;');
 
   try {
-    // Вставка складов
+
     const insertWh = db.prepare('INSERT OR IGNORE INTO warehouses (id, name, city) VALUES (?, ?, ?)');
     for (const wh of bulkData.warehouses) {
       insertWh.run(wh.id, wh.name, wh.city);
     }
 
-    // Вставка категорий
     const insertCat = db.prepare('INSERT OR IGNORE INTO categories (id, name, slug) VALUES (?, ?, ?)');
     let catIdx = 1;
     for (const catName of categorySet) {

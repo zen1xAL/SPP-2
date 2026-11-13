@@ -22,7 +22,6 @@ const __dirname = path.dirname(__filename);
 export async function createApp(customDb?: DatabaseSync) {
   const db = customDb || getDatabase();
 
-  // Автоматический сбор данных из 3 источников (10 000+ записей)
   await runDataIngestion(db);
 
   const app = express();
@@ -31,10 +30,8 @@ export async function createApp(customDb?: DatabaseSync) {
 
   const httpServer = http.createServer(app);
 
-  // Создаем шлюз Apollo Federation v2
   const { gateway } = createSupergraphGateway(db);
 
-  // Настройка Apollo Server 4 с шлюзом Apollo Gateway
   const server = new ApolloServer({
     gateway,
     plugins: [
@@ -49,7 +46,6 @@ export async function createApp(customDb?: DatabaseSync) {
 
   await server.start();
 
-  // Настройка WebSocket сервера для GraphQL Subscriptions после инициализации схемы шлюза
   const wsServer = new WebSocketServer({
     server: httpServer,
     path: '/graphql'
@@ -72,7 +68,6 @@ export async function createApp(customDb?: DatabaseSync) {
     wsServer as any
   );
 
-  // Подключение единого GraphQL-эндпоинта (взаимодействие только через GraphQL!)
   app.use(
     '/graphql',
     expressMiddleware(server as any, {
@@ -83,7 +78,6 @@ export async function createApp(customDb?: DatabaseSync) {
     }) as any
   );
 
-  // Раздача статики собранного клиента (если собран)
   const clientDist = path.resolve(process.cwd(), 'dist/client');
   app.use(express.static(clientDist));
   app.get('*', (req, res, next) => {
@@ -96,7 +90,6 @@ export async function createApp(customDb?: DatabaseSync) {
   return { app, httpServer, server, db, wsServer };
 }
 
-// Запуск фонового генератора тикеров котировок для живой демонстрации Subscriptions
 function startRealtimeTickerGenerator(db: DatabaseSync) {
   setInterval(() => {
     try {
