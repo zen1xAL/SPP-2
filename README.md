@@ -12,10 +12,12 @@ SPP/
 ├── lab2/          # Лабораторная работа №2 (SPA, React, REST API, PostgreSQL, Docker)
 ├── lab3/          # Лабораторная работа №3 (RBAC, JWT, Rate Limiting, Сессии, Логирование, CI)
 ├── lab4/          # Лабораторная работа №4 (Многопользовательская веб-игра, WebSockets, Vanilla JS, Разрешение конфликтов, Оффлайн)
+├── lab5/          # Лабораторная работа №5 (GraphQL Federation v2, 3 источника, 10000+ записей, DataLoader, Tracing)
 ├── Task.md        # Исходное задание к лабораторной работе №1
 ├── Task2.md       # Исходное задание к лабораторной работе №2
 ├── Task3.md       # Исходное задание к лабораторной работе №3
 ├── Task4.md       # Исходное задание к лабораторной работе №4
+├── Task5.md       # Исходное задание к лабораторной работе №5
 └── README.md
 ```
 
@@ -117,4 +119,44 @@ docker compose up --build
 cd lab4
 npm test        # Прогон всех 13 автоматических тестов (конфликты, физика, сокеты, БД)
 npm run verify  # Полный цикл: строгий typecheck + automated tests
+```
+
+---
+
+## 📌 [Лабораторная работа №5](file:///d:/SPP/7sem/SPP/lab5/)
+
+Распределенное клиент-серверное GraphQL-приложение **«Marketplace Hub»** на базе **GraphQL Federation v2**:
+* Задание: [Task5.md](file:///d:/SPP/7sem/SPP/Task5.md) (или [lab5/Task5.md](file:///d:/SPP/7sem/SPP/lab5/Task5.md)).
+* Ключевые возможности:
+  1. **100% GraphQL взаимодействие**: клиент и сервер взаимодействуют только через GraphQL-эндпоинт (`/graphql`). Никаких REST-ручек для клиентских данных.
+  2. **Автоматизированный сбор данных из 3 источников**: публичный REST API товаров DummyJSON, RSS/News фид отзывов и Bulk Seed Generator с базой **более 10 000 записей** (история цен, отзывы, склады).
+  3. **Различные типы операций и многоуровневая вложенность**: `Query`, `Mutation` и потоковые `Subscription` (`graphql-ws`); вложенность до 4 уровней (`Product -> PriceHistory -> Reviews -> Inventory`).
+  4. **Поиск, фильтрация, сортировка и Relay-пагинация**: полнотекстовый поиск с debounce, фильтрация по категориям/ценам, сортировка и спецификация **Relay Cursor Connections** (`edges`, `pageInfo`, `cursor`).
+  5. **Высокая производительность (DataLoader)**: полное устранение проблемы $N+1$ запросов с помощью батчинга DataLoader и индексов SQLite (WAL).
+  6. **Контроль нагрузки и трассировка (8–10 баллов)**: кастомный плагин анализа сложности запросов (**Query Complexity & Depth Limiting**) и плагин трассировки времени выполнения каждого резолвера (**Tracing Plugin**).
+  7. **GraphQL Federation v2 (8–10 баллов)**: декомпозиция на 3 независимых подграфа (`products`, `reviews`, `inventory`) с объединением в единый суперграф через **Apollo Gateway**.
+  8. **Интерактивный UI**: клиент на React 18 + Apollo Client с динамическим конструктором запросов (Query Studio), живой лентой событий и дашбордом метрик.
+
+### Быстрый запуск Лабораторной работы №5:
+
+```bash
+# Локальный запуск (Node.js)
+cd lab5
+npm install
+npm run dev
+
+# Либо запуск в Docker Compose
+cd lab5
+docker compose up --build
+```
+
+Приложение доступно по адресу: `http://localhost:5173` (клиент) и `http://localhost:4000/graphql` (GraphQL API).
+
+### Тестирование и верификация (навык `graphql-testing`):
+
+```bash
+cd lab5
+npm run typecheck # Строгая статическая типизация TypeScript (0 errors)
+npm test          # Прогон 16 автоматических тестов Vitest (Federation, DataLoader, Complexity, Relay, 10k Volume, WS Subscriptions)
+npm run verify    # Полный цикл верификации
 ```

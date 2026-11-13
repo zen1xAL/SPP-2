@@ -1,0 +1,17 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: marketplace_lab5_app
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+    ports:
+      - "4000:4000"
+    volumes:
+      - marketplace_data:/app/data
+
+volumes:
+  marketplace_data:
