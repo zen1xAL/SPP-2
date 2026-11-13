@@ -5,7 +5,7 @@
     "moduleResolution": "NodeNext",
     "lib": ["ES2022"],
     "outDir": "./dist/server",
-    "rootDir": "./src/server",
+    "rootDir": "./server",
     "strict": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
@@ -14,7 +14,7 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true
   },
-  "include": ["src/server/**/*"],
-  "exclude": ["node_modules", "dist", "src/client"]
+  "include": ["server/**/*"],
+  "exclude": ["node_modules", "dist", "client"]
 }
 

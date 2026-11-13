@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { getDatabase } from '../src/server/db.js';
-import { runDataIngestion } from '../src/server/collectors/ingestion.js';
-import { createDataLoaders } from '../src/server/dataloaders.js';
+import { getDatabase } from '../server/db.js';
+import { runDataIngestion } from '../server/collectors/ingestion.js';
+import { createDataLoaders } from '../server/dataloaders.js';
 
 describe('Performance Optimization: DataLoader N+1 Prevention', () => {
   let db: ReturnType<typeof getDatabase>;

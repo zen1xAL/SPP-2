@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { ApolloServer } from '@apollo/server';
-import { getDatabase } from '../src/server/db.js';
-import { runDataIngestion } from '../src/server/collectors/ingestion.js';
-import { createSupergraphGateway } from '../src/server/gateway.js';
-import { createDataLoaders } from '../src/server/dataloaders.js';
+import { getDatabase } from '../server/db.js';
+import { runDataIngestion } from '../server/collectors/ingestion.js';
+import { createSupergraphGateway } from '../server/gateway.js';
+import { createDataLoaders } from '../server/dataloaders.js';
 
 describe('Search, Filtering, Sorting & Relay Cursor Pagination', () => {
   let server: ApolloServer;

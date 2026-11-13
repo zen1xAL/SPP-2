@@ -84,7 +84,7 @@ export async function createApp(customDb?: DatabaseSync) {
   );
 
   // Раздача статики собранного клиента (если собран)
-  const clientDist = path.resolve(__dirname, '../../dist/client');
+  const clientDist = path.resolve(process.cwd(), 'dist/client');
   app.use(express.static(clientDist));
   app.get('*', (req, res, next) => {
     if (req.path.startsWith('/graphql')) return next();

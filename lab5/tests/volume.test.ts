@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { getDatabase, getDatabaseStats } from '../src/server/db.js';
-import { runDataIngestion } from '../src/server/collectors/ingestion.js';
+import { getDatabase, getDatabaseStats } from '../server/db.js';
+import { runDataIngestion } from '../server/collectors/ingestion.js';
 
 describe('Data Ingestion & Volume (>10,000 records from 3 sources)', () => {
   let db: ReturnType<typeof getDatabase>;

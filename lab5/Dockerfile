@@ -3,10 +3,11 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 
 COPY package*.json tsconfig*.json ./
-COPY src/client/tsconfig.json ./src/client/
+COPY client/tsconfig.json ./client/
 RUN npm ci
 
-COPY src/ ./src/
+COPY client/ ./client/
+COPY server/ ./server/
 RUN npm run build
 
 FROM node:22-alpine AS runner

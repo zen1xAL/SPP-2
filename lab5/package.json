@@ -4,14 +4,14 @@
   "description": "High-performance GraphQL Federation platform with 3 automated data sources, 10000+ records, DataLoader, Query Complexity and Tracing",
   "type": "module",
   "scripts": {
-    "dev:server": "tsx watch src/server/server.ts",
-    "dev:client": "vite src/client",
+    "dev:server": "tsx watch server/server.ts",
+    "dev:client": "vite client",
     "dev": "concurrently -k -n \"SRV,CLI\" -c \"blue,green\" \"npm run dev:server\" \"npm run dev:client\"",
-    "build:client": "vite build src/client",
+    "build:client": "vite build client",
     "build:server": "tsc -p tsconfig.server.json",
     "build": "npm run build:client && npm run build:server",
     "start": "node dist/server/server.js",
-    "typecheck": "tsc -p tsconfig.server.json --noEmit && tsc -p src/client/tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.server.json --noEmit && tsc -p client/tsconfig.json --noEmit",
     "test": "vitest run",
     "verify": "npm run typecheck && npm run test"
   },
